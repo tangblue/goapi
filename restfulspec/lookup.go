@@ -1,6 +1,6 @@
 package restfulspec
 
-import restful "github.com/emicklei/go-restful"
+import "github.com/tangblue/goapi/restful"
 
 func asParamType(kind int) string {
 	switch {

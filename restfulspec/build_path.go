@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	restful "github.com/emicklei/go-restful"
 	"github.com/go-openapi/spec"
+	"github.com/tangblue/goapi/restful"
 )
 
 // KeyOpenAPITags is a Metadata key for a restful Route
