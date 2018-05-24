@@ -31,32 +31,32 @@ type CrossOriginResourceSharing struct {
 
 // Filter is a filter function that implements the CORS flow as documented on http://enable-cors.org/server.html
 // and http://www.html5rocks.com/static/images/cors_server_flowchart.png
-func (c CrossOriginResourceSharing) Filter(req *Request, resp *Response, chain *FilterChain) {
+func (c CrossOriginResourceSharing) Filter(req *Request, resp *Response, next func(*Request, *Response)) {
 	origin := req.Request.Header.Get(HEADER_Origin)
 	if len(origin) == 0 {
 		if trace {
 			traceLogger.Print("no Http header Origin set")
 		}
-		chain.ProcessFilter(req, resp)
+		next(req, resp)
 		return
 	}
 	if !c.isOriginAllowed(origin) { // check whether this origin is allowed
 		if trace {
 			traceLogger.Printf("HTTP Origin:%s is not part of %v, neither matches any part of %v", origin, c.AllowedDomains, c.allowedOriginPatterns)
 		}
-		chain.ProcessFilter(req, resp)
+		next(req, resp)
 		return
 	}
 	if req.Request.Method != "OPTIONS" {
 		c.doActualRequest(req, resp)
-		chain.ProcessFilter(req, resp)
+		next(req, resp)
 		return
 	}
 	if acrm := req.Request.Header.Get(HEADER_AccessControlRequestMethod); acrm != "" {
 		c.doPreflightRequest(req, resp)
 	} else {
 		c.doActualRequest(req, resp)
-		chain.ProcessFilter(req, resp)
+		next(req, resp)
 		return
 	}
 }

@@ -46,19 +46,19 @@ func fail(req *Request, resp *Response) {
 	http.Error(resp.ResponseWriter, "something failed", http.StatusInternalServerError)
 }
 
-func globalFilter(req *Request, resp *Response, chain *FilterChain) {
+func globalFilter(req *Request, resp *Response, next func(*Request, *Response)) {
 	io.WriteString(resp.ResponseWriter, "global-")
-	chain.ProcessFilter(req, resp)
+	next(req, resp)
 }
 
-func serviceFilter(req *Request, resp *Response, chain *FilterChain) {
+func serviceFilter(req *Request, resp *Response, next func(*Request, *Response)) {
 	io.WriteString(resp.ResponseWriter, "service-")
-	chain.ProcessFilter(req, resp)
+	next(req, resp)
 }
 
-func routeFilter(req *Request, resp *Response, chain *FilterChain) {
+func routeFilter(req *Request, resp *Response, next func(*Request, *Response)) {
 	io.WriteString(resp.ResponseWriter, "route-")
-	chain.ProcessFilter(req, resp)
+	next(req, resp)
 }
 
 func TestNoFilter(t *testing.T) {

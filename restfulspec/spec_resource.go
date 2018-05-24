@@ -49,14 +49,14 @@ func BuildSwagger(config Config) *spec.Swagger {
 	return swagger
 }
 
-func enableCORS(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
+func enableCORS(req *restful.Request, resp *restful.Response, next func(*restful.Request, *restful.Response)) {
 	if origin := req.HeaderParameter(restful.HEADER_Origin); origin != "" {
 		// prevent duplicate header
 		if len(resp.Header().Get(restful.HEADER_AccessControlAllowOrigin)) == 0 {
 			resp.AddHeader(restful.HEADER_AccessControlAllowOrigin, origin)
 		}
 	}
-	chain.ProcessFilter(req, resp)
+	next(req, resp)
 }
 
 // specResource is a REST resource to serve the Open-API spec.

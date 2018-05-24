@@ -10,9 +10,9 @@ import "strings"
 // and provides the response with a set of allowed methods for the request URL Path.
 // As for any filter, you can also install it for a particular WebService within a Container.
 // Note: this filter is not needed when using CrossOriginResourceSharing (for CORS).
-func (c *Container) OPTIONSFilter(req *Request, resp *Response, chain *FilterChain) {
+func (c *Container) OPTIONSFilter(req *Request, resp *Response, next func(*Request, *Response)) {
 	if "OPTIONS" != req.Request.Method {
-		chain.ProcessFilter(req, resp)
+		next(req, resp)
 		return
 	}
 

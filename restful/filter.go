@@ -11,25 +11,25 @@ type FilterChain struct {
 	Target  RouteFunction    // function to call after passing all filters
 }
 
-// ProcessFilter passes the request,response pair through the next of Filters.
+// processFilter passes the request,response pair through the next of Filters.
 // Each filter can decide to proceed to the next Filter or handle the Response itself.
-func (f *FilterChain) ProcessFilter(request *Request, response *Response) {
+func (f *FilterChain) processFilter(request *Request, response *Response) {
 	if f.Index < len(f.Filters) {
 		f.Index++
-		f.Filters[f.Index-1](request, response, f)
+		f.Filters[f.Index-1](request, response, f.processFilter)
 	} else {
 		f.Target(request, response)
 	}
 }
 
-// FilterFunction definitions must call ProcessFilter on the FilterChain to pass on the control and eventually call the RouteFunction
-type FilterFunction func(*Request, *Response, *FilterChain)
+// FilterFunction definitions must call processFilter on the FilterChain to pass on the control and eventually call the RouteFunction
+type FilterFunction func(*Request, *Response, func(*Request, *Response))
 
 // NoBrowserCacheFilter is a filter function to set HTTP headers that disable browser caching
 // See examples/restful-no-cache-filter.go for usage
-func NoBrowserCacheFilter(req *Request, resp *Response, chain *FilterChain) {
+func NoBrowserCacheFilter(req *Request, resp *Response, next func(*Request, *Response)) {
 	resp.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate") // HTTP 1.1.
 	resp.Header().Set("Pragma", "no-cache")                                   // HTTP 1.0.
 	resp.Header().Set("Expires", "0")                                         // Proxies.
-	chain.ProcessFilter(req, resp)
+	next(req, resp)
 }

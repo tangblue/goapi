@@ -67,7 +67,7 @@ func (r *Route) wrapRequestResponse(httpWriter http.ResponseWriter, httpRequest 
 func (r *Route) dispatchWithFilters(wrappedRequest *Request, wrappedResponse *Response) {
 	if len(r.Filters) > 0 {
 		chain := FilterChain{Filters: r.Filters, Target: r.Function}
-		chain.ProcessFilter(wrappedRequest, wrappedResponse)
+		chain.processFilter(wrappedRequest, wrappedResponse)
 	} else {
 		// unfiltered
 		r.Function(wrappedRequest, wrappedResponse)

@@ -256,7 +256,7 @@ func (c *Container) dispatch(httpWriter http.ResponseWriter, httpRequest *http.R
 			}
 			// TODO
 		}}
-		chain.ProcessFilter(NewRequest(httpRequest), NewResponse(writer))
+		chain.processFilter(NewRequest(httpRequest), NewResponse(writer))
 		return
 	}
 	pathProcessor, routerProcessesPath := c.router.(PathProcessor)
@@ -276,7 +276,7 @@ func (c *Container) dispatch(httpWriter http.ResponseWriter, httpRequest *http.R
 			// handle request by route after passing all filters
 			route.Function(wrappedRequest, wrappedResponse)
 		}}
-		chain.ProcessFilter(wrappedRequest, wrappedResponse)
+		chain.processFilter(wrappedRequest, wrappedResponse)
 	} else {
 		// no filters, handle request by route
 		route.Function(wrappedRequest, wrappedResponse)
@@ -315,7 +315,7 @@ func (c *Container) HandleWithFilter(pattern string, handler http.Handler) {
 		chain := FilterChain{Filters: c.containerFilters, Target: func(req *Request, resp *Response) {
 			handler.ServeHTTP(httpResponse, httpRequest)
 		}}
-		chain.ProcessFilter(NewRequest(httpRequest), NewResponse(httpResponse))
+		chain.processFilter(NewRequest(httpRequest), NewResponse(httpResponse))
 	}
 
 	c.Handle(pattern, http.HandlerFunc(f))

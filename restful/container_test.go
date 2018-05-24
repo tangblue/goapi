@@ -27,17 +27,17 @@ func TestContainer_HandleWithFilter(t *testing.T) {
 	httpHandlerCalled := false
 
 	wc := NewContainer()
-	wc.Filter(func(request *Request, response *Response, chain *FilterChain) {
+	wc.Filter(func(request *Request, response *Response, next func(*Request, *Response)) {
 		prefilterCalled = true
-		chain.ProcessFilter(request, response)
+		next(request, response)
 	})
 	wc.HandleWithFilter("/", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		httpHandlerCalled = true
 		w.Write([]byte("ok"))
 	}))
-	wc.Filter(func(request *Request, response *Response, chain *FilterChain) {
+	wc.Filter(func(request *Request, response *Response, next func(*Request, *Response)) {
 		postfilterCalled = true
-		chain.ProcessFilter(request, response)
+		next(request, response)
 	})
 
 	recorder := httptest.NewRecorder()
