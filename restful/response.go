@@ -47,7 +47,7 @@ func DefaultResponseContentType(mime string) {
 
 // InternalServerError writes the StatusInternalServerError header.
 // DEPRECATED, use WriteErrorString(http.StatusInternalServerError,reason)
-func (r Response) InternalServerError() Response {
+func (r *Response) InternalServerError() *Response {
 	r.WriteHeader(http.StatusInternalServerError)
 	return r
 }
@@ -68,7 +68,7 @@ func (r *Response) PrettyPrint(bePretty bool) {
 }
 
 // AddHeader is a shortcut for .Header().Add(header,value)
-func (r Response) AddHeader(header string, value string) Response {
+func (r *Response) AddHeader(header string, value string) *Response {
 	r.Header().Add(header, value)
 	return r
 }
@@ -216,7 +216,7 @@ func (r *Response) WriteHeader(httpStatus int) {
 }
 
 // StatusCode returns the code that has been written using WriteHeader.
-func (r Response) StatusCode() int {
+func (r *Response) StatusCode() int {
 	if 0 == r.statusCode {
 		// no status code has been written yet; assume OK
 		return http.StatusOK
@@ -235,16 +235,16 @@ func (r *Response) Write(bytes []byte) (int, error) {
 // ContentLength returns the number of bytes written for the response content.
 // Note that this value is only correct if all data is written through the Response using its Write* methods.
 // Data written directly using the underlying http.ResponseWriter is not accounted for.
-func (r Response) ContentLength() int {
+func (r *Response) ContentLength() int {
 	return r.contentLength
 }
 
 // CloseNotify is part of http.CloseNotifier interface
-func (r Response) CloseNotify() <-chan bool {
+func (r *Response) CloseNotify() <-chan bool {
 	return r.ResponseWriter.(http.CloseNotifier).CloseNotify()
 }
 
 // Error returns the err created by WriteError
-func (r Response) Error() error {
+func (r *Response) Error() error {
 	return r.err
 }
