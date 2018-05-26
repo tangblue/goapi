@@ -2,6 +2,7 @@ package restful
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"reflect"
 	"sync"
@@ -86,6 +87,24 @@ func (w *WebService) Path(root string) *WebService {
 	return w
 }
 
+// ParamPath specifies the root URL template path of the WebService.
+// All Routes will be relative to this path.
+func (w *WebService) ParamPath(root string, parameters ...*Parameter) *WebService {
+	if len(parameters) > 0 {
+		var s []interface{} = make([]interface{}, len(parameters))
+		for i, v := range parameters {
+			s[i] = v
+		}
+		root = fmt.Sprintf(root, s...)
+		if w.pathParameters == nil {
+			w.pathParameters = []*Parameter{}
+		}
+		w.pathParameters = append(w.pathParameters, parameters...)
+	}
+
+	return w.Path(root)
+}
+
 // Param adds a PathParameter to document parameters used in the root path.
 func (w *WebService) Param(parameter *Parameter) *WebService {
 	if w.pathParameters == nil {
@@ -104,7 +123,7 @@ func (w *WebService) PathParameter(name, description string) *Parameter {
 // PathParameter creates a new Parameter of kind Path for documentation purposes.
 // It is initialized as required with string as its DataType.
 func PathParameter(name, description string) *Parameter {
-	p := &Parameter{&ParameterData{Name: name, Description: description, Required: true, DataType: "string"}}
+	p := &Parameter{&ParameterData{Name: name, Description: description, Required: true, DefaultValue: string("")}}
 	p.bePath()
 	return p
 }
@@ -118,7 +137,7 @@ func (w *WebService) QueryParameter(name, description string) *Parameter {
 // QueryParameter creates a new Parameter of kind Query for documentation purposes.
 // It is initialized as not required with string as its DataType.
 func QueryParameter(name, description string) *Parameter {
-	p := &Parameter{&ParameterData{Name: name, Description: description, Required: false, DataType: "string", CollectionFormat: CollectionFormatCSV.String()}}
+	p := &Parameter{&ParameterData{Name: name, Description: description, Required: false, DefaultValue: string(""), CollectionFormat: CollectionFormatCSV.String()}}
 	p.beQuery()
 	return p
 }
@@ -146,7 +165,7 @@ func (w *WebService) HeaderParameter(name, description string) *Parameter {
 // HeaderParameter creates a new Parameter of kind (Http) Header for documentation purposes.
 // It is initialized as not required with string as its DataType.
 func HeaderParameter(name, description string) *Parameter {
-	p := &Parameter{&ParameterData{Name: name, Description: description, Required: false, DataType: "string"}}
+	p := &Parameter{&ParameterData{Name: name, Description: description, Required: false, DefaultValue: string("")}}
 	p.beHeader()
 	return p
 }
@@ -160,7 +179,7 @@ func (w *WebService) FormParameter(name, description string) *Parameter {
 // FormParameter creates a new Parameter of kind Form (using application/x-www-form-urlencoded) for documentation purposes.
 // It is initialized as required with string as its DataType.
 func FormParameter(name, description string) *Parameter {
-	p := &Parameter{&ParameterData{Name: name, Description: description, Required: false, DataType: "string"}}
+	p := &Parameter{&ParameterData{Name: name, Description: description, Required: false, DefaultValue: string("")}}
 	p.beForm()
 	return p
 }
@@ -259,32 +278,32 @@ func (w *WebService) Documentation() string {
 	Convenience methods
 */
 
-// HEAD is a shortcut for .Method("HEAD").Path(subPath)
-func (w *WebService) HEAD(subPath string) *RouteBuilder {
-	return new(RouteBuilder).typeNameHandler(w.typeNameHandleFunc).servicePath(w.rootPath).Method("HEAD").Path(subPath)
+// HEAD is a shortcut for .Method("HEAD").ParamPath(subPath)
+func (w *WebService) HEAD(subPath string, params ...*Parameter) *RouteBuilder {
+	return new(RouteBuilder).typeNameHandler(w.typeNameHandleFunc).servicePath(w.rootPath).Method("HEAD").ParamPath(subPath, params...)
 }
 
-// GET is a shortcut for .Method("GET").Path(subPath)
-func (w *WebService) GET(subPath string) *RouteBuilder {
-	return new(RouteBuilder).typeNameHandler(w.typeNameHandleFunc).servicePath(w.rootPath).Method("GET").Path(subPath)
+// GET is a shortcut for .Method("GET").ParamPath(subPath)
+func (w *WebService) GET(subPath string, params ...*Parameter) *RouteBuilder {
+	return new(RouteBuilder).typeNameHandler(w.typeNameHandleFunc).servicePath(w.rootPath).Method("GET").ParamPath(subPath, params...)
 }
 
-// POST is a shortcut for .Method("POST").Path(subPath)
-func (w *WebService) POST(subPath string) *RouteBuilder {
-	return new(RouteBuilder).typeNameHandler(w.typeNameHandleFunc).servicePath(w.rootPath).Method("POST").Path(subPath)
+// POST is a shortcut for .Method("POST").ParamPath(subPath)
+func (w *WebService) POST(subPath string, params ...*Parameter) *RouteBuilder {
+	return new(RouteBuilder).typeNameHandler(w.typeNameHandleFunc).servicePath(w.rootPath).Method("POST").ParamPath(subPath, params...)
 }
 
-// PUT is a shortcut for .Method("PUT").Path(subPath)
-func (w *WebService) PUT(subPath string) *RouteBuilder {
-	return new(RouteBuilder).typeNameHandler(w.typeNameHandleFunc).servicePath(w.rootPath).Method("PUT").Path(subPath)
+// PUT is a shortcut for .Method("PUT").ParamPath(subPath)
+func (w *WebService) PUT(subPath string, params ...*Parameter) *RouteBuilder {
+	return new(RouteBuilder).typeNameHandler(w.typeNameHandleFunc).servicePath(w.rootPath).Method("PUT").ParamPath(subPath, params...)
 }
 
-// PATCH is a shortcut for .Method("PATCH").Path(subPath)
-func (w *WebService) PATCH(subPath string) *RouteBuilder {
-	return new(RouteBuilder).typeNameHandler(w.typeNameHandleFunc).servicePath(w.rootPath).Method("PATCH").Path(subPath)
+// PATCH is a shortcut for .Method("PATCH").ParamPath(subPath)
+func (w *WebService) PATCH(subPath string, params ...*Parameter) *RouteBuilder {
+	return new(RouteBuilder).typeNameHandler(w.typeNameHandleFunc).servicePath(w.rootPath).Method("PATCH").ParamPath(subPath, params...)
 }
 
-// DELETE is a shortcut for .Method("DELETE").Path(subPath)
-func (w *WebService) DELETE(subPath string) *RouteBuilder {
-	return new(RouteBuilder).typeNameHandler(w.typeNameHandleFunc).servicePath(w.rootPath).Method("DELETE").Path(subPath)
+// DELETE is a shortcut for .Method("DELETE").ParamPath(subPath)
+func (w *WebService) DELETE(subPath string, params ...*Parameter) *RouteBuilder {
+	return new(RouteBuilder).typeNameHandler(w.typeNameHandleFunc).servicePath(w.rootPath).Method("DELETE").ParamPath(subPath, params...)
 }

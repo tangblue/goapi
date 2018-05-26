@@ -100,7 +100,7 @@ func buildOperation(ws *restful.WebService, r restful.Route, patterns map[string
 	for k, v := range r.ResponseErrors {
 		r := buildResponse(v, cfg)
 		props.StatusCodeResponses[k] = r
-		if 200 == k { // any 2xx code?
+		if k >= 200 && k < 300 { // any 2xx code
 			o.Responses.Default = &r
 		}
 	}
@@ -112,15 +112,27 @@ func buildOperation(ws *restful.WebService, r restful.Route, patterns map[string
 
 // stringAutoType automatically picks the correct type from an ambiguously typed
 // string. Ex. numbers become int, true/false become bool, etc.
-func stringAutoType(ambiguous string) interface{} {
+func stringAutoType(dataType, ambiguous string) interface{} {
 	if ambiguous == "" {
 		return nil
 	}
-	if parsedInt, err := strconv.ParseInt(ambiguous, 10, 64); err == nil {
-		return parsedInt
-	}
-	if parsedBool, err := strconv.ParseBool(ambiguous); err == nil {
-		return parsedBool
+	switch dataType {
+	case "int", "int8", "int16", "int32", "int64", "byte":
+		if parsedInt, err := strconv.ParseInt(ambiguous, 10, 64); err == nil {
+			return parsedInt
+		}
+	case "uint", "uint8", "uint16", "uint32", "uint64":
+		if parsedUint, err := strconv.ParseUint(ambiguous, 10, 64); err == nil {
+			return parsedUint
+		}
+	case "float32", "float64":
+		if parsedFloat, err := strconv.ParseFloat(ambiguous, 64); err == nil {
+			return parsedFloat
+		}
+	case "bool":
+		if parsedBool, err := strconv.ParseBool(ambiguous); err == nil {
+			return parsedBool
+		}
 	}
 	return ambiguous
 }
@@ -128,14 +140,15 @@ func stringAutoType(ambiguous string) interface{} {
 func buildParameter(r restful.Route, restfulParam *restful.Parameter, pattern string, cfg Config) spec.Parameter {
 	p := spec.Parameter{}
 	param := restfulParam.Data()
+	typeName := restfulParam.GetDataTypeName()
 	p.In = asParamType(param.Kind)
 	if param.AllowMultiple {
 		p.Type = "array"
 		p.Items = spec.NewItems()
-		p.Items.Type = param.DataType
+		p.Items.Type = typeName
 		p.CollectionFormat = param.CollectionFormat
 	} else {
-		p.Type = param.DataType
+		p.Type = typeName
 	}
 	p.Description = param.Description
 	p.Name = param.Name
@@ -145,7 +158,7 @@ func buildParameter(r restful.Route, restfulParam *restful.Parameter, pattern st
 		p.Pattern = pattern
 	}
 	st := reflect.TypeOf(r.ReadSample)
-	if param.Kind == restful.BodyParameterKind && r.ReadSample != nil && param.DataType == st.String() {
+	if param.Kind == restful.BodyParameterKind && r.ReadSample != nil && typeName == st.String() {
 		p.Schema = new(spec.Schema)
 		p.SimpleSchema = spec.SimpleSchema{}
 		if st.Kind() == reflect.Array || st.Kind() == reflect.Slice {
@@ -162,13 +175,32 @@ func buildParameter(r restful.Route, restfulParam *restful.Parameter, pattern st
 				p.Schema.Items.Schema.Ref = spec.MustCreateRef("#/definitions/" + dataTypeName)
 			}
 		} else {
-			p.Schema.Ref = spec.MustCreateRef("#/definitions/" + param.DataType)
+			p.Schema.Ref = spec.MustCreateRef("#/definitions/" + typeName)
 		}
 
 	} else {
-		p.Type = param.DataType
-		p.Default = stringAutoType(param.DefaultValue)
-		p.Format = param.DataFormat
+		typeKind := reflect.TypeOf(param.DefaultValue).Kind().String()
+		if isPrimitiveType(typeKind) {
+			p.Type = jsonSchemaType(typeKind)
+		} else {
+			p.Type = jsonSchemaType(typeName)
+		}
+		p.Default = param.DefaultValue
+		if param.DataFormat != "" {
+			p.Format = param.DataFormat
+		} else {
+			p.Format = jsonSchemaFormat(typeName)
+		}
+		if param.MinValue != nil {
+			p.WithMinimum(param.MinValue, false)
+		}
+		if param.MaxValue != nil {
+			p.WithMaximum(param.MaxValue, false)
+		}
+		if param.MinLength != 0 || param.MaxLength != 0 {
+			p.WithMinLength(param.MinLength)
+			p.WithMaxLength(param.MaxLength)
+		}
 	}
 
 	return p
@@ -198,7 +230,10 @@ func buildResponse(e restful.ResponseError, cfg Config) (r spec.Response) {
 				r.Schema.Items.Schema.Ref = spec.MustCreateRef("#/definitions/" + modelName)
 			}
 		} else {
-			modelName := definitionBuilder{}.keyFrom(st)
+			modelName := st.Kind().String()
+			if !isPrimitiveType(modelName) {
+				modelName = definitionBuilder{}.keyFrom(st)
+			}
 			if isPrimitiveType(modelName) {
 				// If the response is a primitive type, then don't reference any definitions.
 				// Instead, set the schema's "type" to the model name.
@@ -240,7 +275,7 @@ func jsonSchemaType(modelName string) string {
 		"int32": "integer",
 		"int64": "integer",
 
-		"byte":      "integer",
+		"byte":      "string",
 		"float64":   "number",
 		"float32":   "number",
 		"bool":      "boolean",
@@ -249,6 +284,33 @@ func jsonSchemaType(modelName string) string {
 	mapped, ok := schemaMap[modelName]
 	if !ok {
 		return modelName // use as is (custom or struct)
+	}
+	return mapped
+}
+
+func jsonSchemaFormat(modelName string) string {
+	schemaMap := map[string]string{
+		"int":   "int32",
+		"int8":  "int8",
+		"int16": "int16",
+		"int32": "int32",
+		"int64": "int64",
+
+		"uint":   "uint32",
+		"uint8":  "uint8",
+		"uint16": "uint16",
+		"uint32": "uint32",
+		"uint64": "uint64",
+
+		"byte":       "byte",
+		"float32":    "float",
+		"float64":    "double",
+		"time.Time":  "date-time",
+		"*time.Time": "date-time",
+	}
+	mapped, ok := schemaMap[modelName]
+	if !ok {
+		return "" // no format
 	}
 	return mapped
 }

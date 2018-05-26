@@ -6,6 +6,7 @@ package restful
 
 import (
 	"compress/zlib"
+	"errors"
 	"net/http"
 )
 
@@ -36,28 +37,43 @@ func DefaultRequestContentType(mime string) {
 	defaultRequestContentType = mime
 }
 
-// PathParameter accesses the Path parameter value by its name
-func (r *Request) PathParameter(name string) string {
-	return r.pathParameters[name]
-}
+// GetParameter accesses the parameter value by Parameter
+func (r *Request) GetParameter(p *Parameter) (interface{}, error) {
+	var v string
+	var ok bool
 
-// PathParameters accesses the Path parameter values
-func (r *Request) PathParameters() map[string]string {
-	return r.pathParameters
-}
-
-// QueryParameter returns the (first) Query parameter value by its name
-func (r *Request) QueryParameter(name string) string {
-	return r.Request.FormValue(name)
-}
-
-// BodyParameter parses the body of the request (once for typically a POST or a PUT) and returns the value of the given name or an error.
-func (r *Request) BodyParameter(name string) (string, error) {
 	err := r.Request.ParseForm()
 	if err != nil {
-		return "", err
+		return p.getDefaultValue(), err
 	}
-	return r.Request.PostFormValue(name), nil
+
+	name := p.getName()
+	switch p.getKind() {
+	case PathParameterKind:
+		v, ok = r.pathParameters[name]
+	case QueryParameterKind, FormParameterKind:
+		va, ok := r.Request.Form[name]
+		if ok {
+			v = va[0]
+		}
+	case BodyParameterKind:
+		va, ok := r.Request.PostForm[name]
+		if ok {
+			v = va[0]
+		}
+	case HeaderParameterKind:
+		v, ok = r.Request.Header.Get(name), true
+	}
+
+	if !ok {
+		if v := p.getDefaultValue(); p.isRequired() {
+			return v, errors.New("not available")
+		} else {
+			return v, nil
+		}
+	}
+
+	return p.getValue(v)
 }
 
 // HeaderParameter returns the HTTP Header value of a Header name or empty if missing

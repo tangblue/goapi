@@ -85,6 +85,24 @@ func (b *RouteBuilder) Path(subPath string) *RouteBuilder {
 	return b
 }
 
+func (b *RouteBuilder) ParamPath(subPath string, parameters ...*Parameter) *RouteBuilder {
+	if len(parameters) == 0 {
+		b.currentPath = subPath
+	} else {
+		var s []interface{} = make([]interface{}, len(parameters))
+		for i, v := range parameters {
+			s[i] = v
+		}
+		b.currentPath = fmt.Sprintf(subPath, s...)
+
+		if b.parameters == nil {
+			b.parameters = []*Parameter{}
+		}
+		b.parameters = append(b.parameters, parameters...)
+	}
+	return b
+}
+
 // Doc tells what this route is all about. Optional.
 func (b *RouteBuilder) Doc(documentation string) *RouteBuilder {
 	b.doc = documentation
@@ -104,7 +122,7 @@ func (b *RouteBuilder) Reads(sample interface{}, optionalDescription ...string) 
 	if fn == nil {
 		fn = reflectTypeName
 	}
-	typeAsName := fn(sample)
+	//typeAsName := fn(sample)
 	description := ""
 	if len(optionalDescription) > 0 {
 		description = optionalDescription[0]
@@ -113,7 +131,7 @@ func (b *RouteBuilder) Reads(sample interface{}, optionalDescription ...string) 
 	bodyParameter := &Parameter{&ParameterData{Name: "body", Description: description}}
 	bodyParameter.beBody()
 	bodyParameter.Required(true)
-	bodyParameter.DataType(typeAsName)
+	bodyParameter.DataType(sample)
 	b.Param(bodyParameter)
 	return b
 }

@@ -200,7 +200,10 @@ func (b definitionBuilder) buildProperty(field reflect.StructField, model *spec.
 		return jsonName, modelDescription, prop
 	}
 
-	fieldTypeName := b.keyFrom(fieldType)
+	fieldTypeName := fieldType.Kind().String()
+	if !b.isPrimitiveType(fieldTypeName) {
+		fieldTypeName = b.keyFrom(fieldType)
+	}
 	if b.isPrimitiveType(fieldTypeName) {
 		mapped := b.jsonSchemaType(fieldTypeName)
 		prop.Type = []string{mapped}
@@ -439,30 +442,7 @@ func (b definitionBuilder) jsonNameOfField(field reflect.StructField) string {
 
 // see also http://json-schema.org/latest/json-schema-core.html#anchor8
 func (b definitionBuilder) jsonSchemaType(modelName string) string {
-	schemaMap := map[string]string{
-		"uint":   "integer",
-		"uint8":  "integer",
-		"uint16": "integer",
-		"uint32": "integer",
-		"uint64": "integer",
-
-		"int":   "integer",
-		"int8":  "integer",
-		"int16": "integer",
-		"int32": "integer",
-		"int64": "integer",
-
-		"byte":      "integer",
-		"float64":   "number",
-		"float32":   "number",
-		"bool":      "boolean",
-		"time.Time": "string",
-	}
-	mapped, ok := schemaMap[modelName]
-	if !ok {
-		return modelName // use as is (custom or struct)
-	}
-	return mapped
+	return jsonSchemaType(modelName)
 }
 
 func (b definitionBuilder) jsonSchemaFormat(modelName string) string {
@@ -471,21 +451,5 @@ func (b definitionBuilder) jsonSchemaFormat(modelName string) string {
 			return mapped
 		}
 	}
-	schemaMap := map[string]string{
-		"int":        "int32",
-		"int32":      "int32",
-		"int64":      "int64",
-		"byte":       "byte",
-		"uint":       "integer",
-		"uint8":      "byte",
-		"float64":    "double",
-		"float32":    "float",
-		"time.Time":  "date-time",
-		"*time.Time": "date-time",
-	}
-	mapped, ok := schemaMap[modelName]
-	if !ok {
-		return "" // no format
-	}
-	return mapped
+	return jsonSchemaFormat(modelName)
 }
