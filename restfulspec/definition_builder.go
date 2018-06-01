@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/go-openapi/spec"
+	"github.com/tangblue/goapi/spec"
 )
 
 type definitionBuilder struct {

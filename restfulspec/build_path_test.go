@@ -3,8 +3,8 @@ package restfulspec
 import (
 	"testing"
 
-	"github.com/go-openapi/spec"
 	"github.com/tangblue/goapi/restful"
+	"github.com/tangblue/goapi/spec"
 )
 
 func TestRouteToPath(t *testing.T) {

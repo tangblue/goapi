@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-openapi/spec"
+	"github.com/tangblue/goapi/spec"
 )
 
 func setDescription(prop *spec.Schema, field reflect.StructField) {

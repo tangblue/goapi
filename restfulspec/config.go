@@ -3,8 +3,8 @@ package restfulspec
 import (
 	"reflect"
 
-	"github.com/go-openapi/spec"
 	"github.com/tangblue/goapi/restful"
+	"github.com/tangblue/goapi/spec"
 )
 
 // MapSchemaFormatFunc can be used to modify typeName at definition time.

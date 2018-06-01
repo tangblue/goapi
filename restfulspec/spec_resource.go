@@ -1,8 +1,8 @@
 package restfulspec
 
 import (
-	"github.com/go-openapi/spec"
 	"github.com/tangblue/goapi/restful"
+	"github.com/tangblue/goapi/spec"
 )
 
 // NewOpenAPIService returns a new WebService that provides the API documentation of all services

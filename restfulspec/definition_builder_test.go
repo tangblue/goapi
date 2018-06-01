@@ -3,7 +3,7 @@ package restfulspec
 import (
 	"testing"
 
-	"github.com/go-openapi/spec"
+	"github.com/tangblue/goapi/spec"
 )
 
 type Apple struct {
