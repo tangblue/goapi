@@ -69,13 +69,13 @@ func (h *Header) WithDefault(defaultValue interface{}) *Header {
 }
 
 // WithMaxLength sets a max length value
-func (h *Header) WithMaxLength(max int64) *Header {
+func (h *Header) WithMaxLength(max int) *Header {
 	h.MaxLength = &max
 	return h
 }
 
 // WithMinLength sets a min length value
-func (h *Header) WithMinLength(min int64) *Header {
+func (h *Header) WithMinLength(min int) *Header {
 	h.MinLength = &min
 	return h
 }

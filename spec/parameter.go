@@ -188,13 +188,13 @@ func (p *Parameter) AsRequired() *Parameter {
 }
 
 // WithMaxLength sets a max length value
-func (p *Parameter) WithMaxLength(max int64) *Parameter {
+func (p *Parameter) WithMaxLength(max int) *Parameter {
 	p.MaxLength = &max
 	return p
 }
 
 // WithMinLength sets a min length value
-func (p *Parameter) WithMinLength(min int64) *Parameter {
+func (p *Parameter) WithMinLength(min int) *Parameter {
 	p.MinLength = &min
 	return p
 }
@@ -212,14 +212,14 @@ func (p *Parameter) WithMultipleOf(number float64) *Parameter {
 }
 
 // WithMaximum sets a maximum number value
-func (p *Parameter) WithMaximum(max float64, exclusive bool) *Parameter {
+func (p *Parameter) WithMaximum(max interface{}, exclusive bool) *Parameter {
 	p.Maximum = &max
 	p.ExclusiveMaximum = exclusive
 	return p
 }
 
 // WithMinimum sets a minimum number value
-func (p *Parameter) WithMinimum(min float64, exclusive bool) *Parameter {
+func (p *Parameter) WithMinimum(min interface{}, exclusive bool) *Parameter {
 	p.Minimum = &min
 	p.ExclusiveMinimum = exclusive
 	return p

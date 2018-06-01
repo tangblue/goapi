@@ -46,12 +46,12 @@ func (s *SimpleSchema) ItemsTypeName() string {
 }
 
 type CommonValidations struct {
-	Maximum          *float64      `json:"maximum,omitempty"`
+	Maximum          interface{}   `json:"maximum,omitempty"`
 	ExclusiveMaximum bool          `json:"exclusiveMaximum,omitempty"`
-	Minimum          *float64      `json:"minimum,omitempty"`
+	Minimum          interface{}   `json:"minimum,omitempty"`
 	ExclusiveMinimum bool          `json:"exclusiveMinimum,omitempty"`
-	MaxLength        *int64        `json:"maxLength,omitempty"`
-	MinLength        *int64        `json:"minLength,omitempty"`
+	MaxLength        *int          `json:"maxLength,omitempty"`
+	MinLength        *int          `json:"minLength,omitempty"`
 	Pattern          string        `json:"pattern,omitempty"`
 	MaxItems         *int64        `json:"maxItems,omitempty"`
 	MinItems         *int64        `json:"minItems,omitempty"`
@@ -98,13 +98,13 @@ func (i *Items) WithDefault(defaultValue interface{}) *Items {
 }
 
 // WithMaxLength sets a max length value
-func (i *Items) WithMaxLength(max int64) *Items {
+func (i *Items) WithMaxLength(max int) *Items {
 	i.MaxLength = &max
 	return i
 }
 
 // WithMinLength sets a min length value
-func (i *Items) WithMinLength(min int64) *Items {
+func (i *Items) WithMinLength(min int) *Items {
 	i.MinLength = &min
 	return i
 }
