@@ -218,16 +218,16 @@ func (w *WebService) Method(httpMethod string) *RouteBuilder {
 	return new(RouteBuilder).typeNameHandler(w.typeNameHandleFunc).servicePath(w.rootPath).Method(httpMethod)
 }
 
-// Produces specifies that this WebService can produce one or more MIME types.
+// Produce specifies that this WebService can produce one or more MIME types.
 // Http requests must have one of these values set for the Accept header.
-func (w *WebService) Produces(contentTypes ...string) *WebService {
+func (w *WebService) Produce(contentTypes ...string) *WebService {
 	w.produces = contentTypes
 	return w
 }
 
-// Consumes specifies that this WebService can consume one or more MIME types.
+// Consume specifies that this WebService can consume one or more MIME types.
 // Http requests must have one of these values set for the Content-Type header.
-func (w *WebService) Consumes(accepts ...string) *WebService {
+func (w *WebService) Consume(accepts ...string) *WebService {
 	w.consumes = accepts
 	return w
 }

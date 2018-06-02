@@ -42,10 +42,10 @@ type RouteBuilder struct {
 // Do evaluates each argument with the RouteBuilder itself.
 // This allows you to follow DRY principles without breaking the fluent programming style.
 // Example:
-// 		ws.Route(ws.DELETE("/{name}").Handler(t.deletePerson).Do(Returns200, Returns500))
+// 		ws.Route(ws.DELETE("/{name}").Handler(t.deletePerson).Do(Return200, Return500))
 //
-//		func Returns500(b *RouteBuilder) {
-//			b.Returns(500, "Internal Server Error", restful.ServiceError{})
+//		func Return500(b *RouteBuilder) {
+//			b.Return(500, "Internal Server Error", restful.ServiceError{})
 //		}
 func (b *RouteBuilder) Do(oneArgBlocks ...func(*RouteBuilder)) *RouteBuilder {
 	for _, each := range oneArgBlocks {
@@ -67,14 +67,14 @@ func (b *RouteBuilder) Method(method string) *RouteBuilder {
 	return b
 }
 
-// Produces specifies what MIME types can be produced ; the matched one will appear in the Content-Type Http header.
-func (b *RouteBuilder) Produces(mimeTypes ...string) *RouteBuilder {
+// Produce specifies what MIME types can be produced ; the matched one will appear in the Content-Type Http header.
+func (b *RouteBuilder) Produce(mimeTypes ...string) *RouteBuilder {
 	b.produces = mimeTypes
 	return b
 }
 
-// Consumes specifies what MIME types can be consumes ; the Accept Http header must matched any of these
-func (b *RouteBuilder) Consumes(mimeTypes ...string) *RouteBuilder {
+// Consume specifies what MIME types can be consumes ; the Accept Http header must matched any of these
+func (b *RouteBuilder) Consume(mimeTypes ...string) *RouteBuilder {
 	b.consumes = mimeTypes
 	return b
 }
@@ -109,15 +109,15 @@ func (b *RouteBuilder) Doc(documentation string) *RouteBuilder {
 	return b
 }
 
-// Notes is a verbose explanation of the operation behavior. Optional.
-func (b *RouteBuilder) Notes(notes string) *RouteBuilder {
+// Note is a verbose explanation of the operation behavior. Optional.
+func (b *RouteBuilder) Note(notes string) *RouteBuilder {
 	b.notes = notes
 	return b
 }
 
-// Reads tells what resource type will be read from the request payload. Optional.
+// Read tells what resource type will be read from the request payload. Optional.
 // A parameter of type "body" is added ,required is set to true and the dataType is set to the qualified name of the sample's type.
-func (b *RouteBuilder) Reads(sample interface{}, optionalDescription ...string) *RouteBuilder {
+func (b *RouteBuilder) Read(sample interface{}, optionalDescription ...string) *RouteBuilder {
 	fn := b.typeNameHandleFunc
 	if fn == nil {
 		fn = reflectTypeName
@@ -136,7 +136,7 @@ func (b *RouteBuilder) Reads(sample interface{}, optionalDescription ...string) 
 	return b
 }
 
-// ParameterNamed returns a Parameter already known to the RouteBuilder. Returns nil if not.
+// ParameterNamed returns a Parameter already known to the RouteBuilder. Return nil if not.
 // Use this to modify or extend information for the Parameter (through its Data()).
 func (b RouteBuilder) ParameterNamed(name string) (p *Parameter) {
 	for _, each := range b.parameters {
@@ -147,8 +147,8 @@ func (b RouteBuilder) ParameterNamed(name string) (p *Parameter) {
 	return p
 }
 
-// Writes tells what resource type will be written as the response payload. Optional.
-func (b *RouteBuilder) Writes(sample interface{}) *RouteBuilder {
+// Write tells what resource type will be written as the response payload. Optional.
+func (b *RouteBuilder) Write(sample interface{}) *RouteBuilder {
 	b.writeSample = sample
 	return b
 }
@@ -169,15 +169,9 @@ func (b *RouteBuilder) Operation(name string) *RouteBuilder {
 	return b
 }
 
-// ReturnsError is deprecated, use Returns instead.
-func (b *RouteBuilder) ReturnsError(code int, message string, model interface{}) *RouteBuilder {
-	log.Print("ReturnsError is deprecated, use Returns instead.")
-	return b.Returns(code, message, model)
-}
-
-// Returns allows you to document what responses (errors or regular) can be expected.
+// Return allows you to document what responses (errors or regular) can be expected.
 // The model parameter is optional ; either pass a struct instance or use nil if not applicable.
-func (b *RouteBuilder) Returns(code int, message string, model interface{}) *RouteBuilder {
+func (b *RouteBuilder) Return(code int, message string, model interface{}) *RouteBuilder {
 	err := ResponseError{
 		Code:      code,
 		Message:   message,
@@ -192,9 +186,9 @@ func (b *RouteBuilder) Returns(code int, message string, model interface{}) *Rou
 	return b
 }
 
-// DefaultReturns is a special Returns call that sets the default of the response ; the code is zero.
-func (b *RouteBuilder) DefaultReturns(message string, model interface{}) *RouteBuilder {
-	b.Returns(0, message, model)
+// DefaultReturn is a special Return call that sets the default of the response ; the code is zero.
+func (b *RouteBuilder) DefaultReturn(message string, model interface{}) *RouteBuilder {
+	b.Return(0, message, model)
 	// Modify the ResponseError just added/updated
 	re := b.errorMap[0]
 	// errorMap is initialized
@@ -257,8 +251,8 @@ func (b *RouteBuilder) If(condition RouteSelectionConditionFunction) *RouteBuild
 }
 
 // If no specific Route path then set to rootPath
-// If no specific Produces then set to rootProduces
-// If no specific Consumes then set to rootConsumes
+// If no specific Produce then set to rootProduces
+// If no specific Consume then set to rootConsumes
 func (b *RouteBuilder) copyDefaults(rootProduces, rootConsumes []string) {
 	if len(b.produces) == 0 {
 		b.produces = rootProduces
