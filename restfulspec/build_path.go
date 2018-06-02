@@ -179,17 +179,17 @@ func buildParameter(r restful.Route, restfulParam *restful.Parameter, pattern st
 		}
 
 	} else {
+		p.Default = param.DefaultValue
 		typeKind := reflect.TypeOf(param.DefaultValue).Kind().String()
 		if isPrimitiveType(typeKind) {
 			p.Type = jsonSchemaType(typeKind)
+			p.Format = jsonSchemaFormat(typeKind)
 		} else {
 			p.Type = jsonSchemaType(typeName)
+			p.Format = jsonSchemaFormat(typeName)
 		}
-		p.Default = param.DefaultValue
 		if param.DataFormat != "" {
 			p.Format = param.DataFormat
-		} else {
-			p.Format = jsonSchemaFormat(typeName)
 		}
 		if param.MinValue != nil {
 			p.WithMinimum(param.MinValue, false)

@@ -18,7 +18,7 @@ func NewOpenAPIService(config Config) *restful.WebService {
 
 	swagger := BuildSwagger(config)
 	resource := specResource{swagger: swagger}
-	ws.Route(ws.GET("/").To(resource.getSwagger))
+	ws.Route(ws.GET("/").Handler(resource.getSwagger))
 	return ws
 }
 

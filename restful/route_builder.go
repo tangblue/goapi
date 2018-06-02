@@ -42,7 +42,7 @@ type RouteBuilder struct {
 // Do evaluates each argument with the RouteBuilder itself.
 // This allows you to follow DRY principles without breaking the fluent programming style.
 // Example:
-// 		ws.Route(ws.DELETE("/{name}").To(t.deletePerson).Do(Returns200, Returns500))
+// 		ws.Route(ws.DELETE("/{name}").Handler(t.deletePerson).Do(Returns200, Returns500))
 //
 //		func Returns500(b *RouteBuilder) {
 //			b.Returns(500, "Internal Server Error", restful.ServiceError{})
@@ -54,9 +54,9 @@ func (b *RouteBuilder) Do(oneArgBlocks ...func(*RouteBuilder)) *RouteBuilder {
 	return b
 }
 
-// To bind the route to a function.
+// Handler bind the route to a function.
 // If this route is matched with the incoming Http Request then call this function with the *Request,*Response pair. Required.
-func (b *RouteBuilder) To(function RouteFunction) *RouteBuilder {
+func (b *RouteBuilder) Handler(function RouteFunction) *RouteBuilder {
 	b.function = function
 	return b
 }
@@ -163,7 +163,7 @@ func (b *RouteBuilder) Param(parameter *Parameter) *RouteBuilder {
 }
 
 // Operation allows you to document what the actual method/function call is of the Route.
-// Unless called, the operation name is derived from the RouteFunction set using To(..).
+// Unless called, the operation name is derived from the RouteFunction set using Handler(..).
 func (b *RouteBuilder) Operation(name string) *RouteBuilder {
 	b.operation = name
 	return b
