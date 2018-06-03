@@ -3,6 +3,7 @@ package restful
 import (
 	"errors"
 	"reflect"
+	"regexp"
 	"strconv"
 )
 
@@ -68,6 +69,7 @@ type ParameterData struct {
 	MinLength, MaxLength          int
 	CollectionFormat              string
 	Regex                         string
+	regex                         *regexp.Regexp
 }
 
 // Data returns the state of the Parameter
@@ -161,7 +163,12 @@ func (p *Parameter) CollectionFormat(format CollectionFormat) *Parameter {
 }
 
 func (p *Parameter) Regex(regex string) *Parameter {
+	r, err := regexp.Compile(regex)
+	if err != nil {
+		panic("Bad regex: " + regex)
+	}
 	p.data.Regex = regex
+	p.data.regex = r
 	return p
 }
 
@@ -208,8 +215,11 @@ func (p *Parameter) getDefaultValue() interface{} {
 }
 
 var (
-	errLTMin = errors.New("less than minimum")
-	errGTMax = errors.New("great than maximum")
+	errLTMin      = errors.New("less than minimum")
+	errGTMax      = errors.New("great than maximum")
+	errTooShort   = errors.New("too short")
+	errTooLong    = errors.New("too long")
+	errBadPattern = errors.New("bad pattern")
 )
 
 func (p *Parameter) getValue(s string) (interface{}, error) {
@@ -253,9 +263,14 @@ func (p *Parameter) ValidateValueString(v string, err error) (interface{}, error
 
 	if p.data.MinLength != 0 || p.data.MaxLength != 0 {
 		if len(v) < p.data.MinLength {
-			return dv, errLTMin
+			return dv, errTooShort
 		} else if len(v) > p.data.MaxLength {
-			return dv, errGTMax
+			return dv, errTooLong
+		}
+	}
+	if p.data.regex != nil {
+		if !p.data.regex.MatchString(v) {
+			return dv, errBadPattern
 		}
 	}
 

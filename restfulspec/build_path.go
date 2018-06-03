@@ -201,6 +201,9 @@ func buildParameter(r restful.Route, restfulParam *restful.Parameter, pattern st
 			p.WithMinLength(param.MinLength)
 			p.WithMaxLength(param.MaxLength)
 		}
+		if param.Regex != "" {
+			p.WithPattern(param.Regex)
+		}
 	}
 
 	return p
