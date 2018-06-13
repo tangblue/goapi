@@ -2,7 +2,6 @@ package restfulspec
 
 import (
 	"net/http"
-	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -14,7 +13,7 @@ import (
 // KeyOpenAPITags is a Metadata key for a restful Route
 const KeyOpenAPITags = "openapi.tags"
 
-func buildPaths(ws *restful.WebService, cfg Config) spec.Paths {
+func buildPaths(ws *restful.WebService, cfg Config, sb *swaggerBuilder) spec.Paths {
 	p := spec.Paths{Paths: map[string]spec.PathItem{}}
 	for _, each := range ws.Routes() {
 		path, patterns := sanitizePath(each.Path)
@@ -22,7 +21,7 @@ func buildPaths(ws *restful.WebService, cfg Config) spec.Paths {
 		if !ok {
 			existingPathItem = spec.PathItem{}
 		}
-		p.Paths[path] = buildPathItem(ws, each, existingPathItem, patterns, cfg)
+		p.Paths[path] = buildPathItem(ws, each, existingPathItem, patterns, cfg, sb)
 	}
 	return p
 }
@@ -51,8 +50,8 @@ func sanitizePath(restfulPath string) (string, map[string]string) {
 	return openapiPath, patterns
 }
 
-func buildPathItem(ws *restful.WebService, r restful.Route, existingPathItem spec.PathItem, patterns map[string]string, cfg Config) spec.PathItem {
-	op := buildOperation(ws, r, patterns, cfg)
+func buildPathItem(ws *restful.WebService, r restful.Route, existingPathItem spec.PathItem, patterns map[string]string, cfg Config, sb *swaggerBuilder) spec.PathItem {
+	op := buildOperation(ws, r, patterns, cfg, sb)
 	switch r.Method {
 	case "GET":
 		existingPathItem.Get = op
@@ -72,13 +71,14 @@ func buildPathItem(ws *restful.WebService, r restful.Route, existingPathItem spe
 	return existingPathItem
 }
 
-func buildOperation(ws *restful.WebService, r restful.Route, patterns map[string]string, cfg Config) *spec.Operation {
+func buildOperation(ws *restful.WebService, r restful.Route, patterns map[string]string, cfg Config, sb *swaggerBuilder) *spec.Operation {
 	o := spec.NewOperation(r.Operation)
 	o.Description = r.Notes
 	o.Summary = stripTags(r.Doc)
 	o.Consumes = r.Consumes
 	o.Produces = r.Produces
 	o.Deprecated = r.Deprecated
+	o.Security = r.Security
 	if r.Metadata != nil {
 		if tags, ok := r.Metadata[KeyOpenAPITags]; ok {
 			if tagList, ok := tags.([]string); ok {
@@ -88,19 +88,19 @@ func buildOperation(ws *restful.WebService, r restful.Route, patterns map[string
 	}
 	// collect any path parameters
 	for _, param := range ws.PathParameters() {
-		o.Parameters = append(o.Parameters, buildParameter(r, param, patterns[param.Data().Name], cfg))
+		o.Parameters = append(o.Parameters, sb.param.build(r, param, patterns[param.Data().Name]))
 	}
 	// route specific params
 	for _, each := range r.ParameterDocs {
-		o.Parameters = append(o.Parameters, buildParameter(r, each, patterns[each.Data().Name], cfg))
+		o.Parameters = append(o.Parameters, sb.param.build(r, each, patterns[each.Data().Name]))
 	}
 	o.Responses = new(spec.Responses)
 	props := &o.Responses.ResponsesProps
 	props.StatusCodeResponses = map[int]spec.Response{}
 	for k, v := range r.ResponseErrors {
-		r := buildResponse(v, cfg)
+		r := sb.resp.build(v)
 		props.StatusCodeResponses[k] = r
-		if k >= 200 && k < 300 { // any 2xx code
+		if v.IsDefault {
 			o.Responses.Default = &r
 		}
 	}
@@ -135,119 +135,6 @@ func stringAutoType(dataType, ambiguous string) interface{} {
 		}
 	}
 	return ambiguous
-}
-
-func buildParameter(r restful.Route, restfulParam *restful.Parameter, pattern string, cfg Config) spec.Parameter {
-	p := spec.Parameter{}
-	param := restfulParam.Data()
-	typeName := restfulParam.GetDataTypeName()
-	p.In = asParamType(param.Kind)
-	if param.AllowMultiple {
-		p.Type = "array"
-		p.Items = spec.NewItems()
-		p.Items.Type = typeName
-		p.CollectionFormat = param.CollectionFormat
-	} else {
-		p.Type = typeName
-	}
-	p.Description = param.Description
-	p.Name = param.Name
-	p.Required = param.Required
-
-	if param.Kind == restful.PathParameterKind {
-		p.Pattern = pattern
-	}
-	st := reflect.TypeOf(r.ReadSample)
-	if param.Kind == restful.BodyParameterKind && r.ReadSample != nil && typeName == st.String() {
-		p.Schema = new(spec.Schema)
-		p.SimpleSchema = spec.SimpleSchema{}
-		if st.Kind() == reflect.Array || st.Kind() == reflect.Slice {
-			dataTypeName := definitionBuilder{}.keyFrom(st.Elem())
-			p.Schema.Type = []string{"array"}
-			p.Schema.Items = &spec.SchemaOrArray{
-				Schema: &spec.Schema{},
-			}
-			isPrimitive := isPrimitiveType(dataTypeName)
-			if isPrimitive {
-				mapped := jsonSchemaType(dataTypeName)
-				p.Schema.Items.Schema.Type = []string{mapped}
-			} else {
-				p.Schema.Items.Schema.Ref = spec.MustCreateRef("#/definitions/" + dataTypeName)
-			}
-		} else {
-			p.Schema.Ref = spec.MustCreateRef("#/definitions/" + typeName)
-		}
-
-	} else {
-		p.Default = param.DefaultValue
-		typeKind := reflect.TypeOf(param.DefaultValue).Kind().String()
-		if isPrimitiveType(typeKind) {
-			p.Type = jsonSchemaType(typeKind)
-			p.Format = jsonSchemaFormat(typeKind)
-		} else {
-			p.Type = jsonSchemaType(typeName)
-			p.Format = jsonSchemaFormat(typeName)
-		}
-		if param.DataFormat != "" {
-			p.Format = param.DataFormat
-		}
-		if param.MinValue != nil {
-			p.WithMinimum(param.MinValue, false)
-		}
-		if param.MaxValue != nil {
-			p.WithMaximum(param.MaxValue, false)
-		}
-		if param.MinLength != 0 || param.MaxLength != 0 {
-			p.WithMinLength(param.MinLength)
-			p.WithMaxLength(param.MaxLength)
-		}
-		if param.Regex != "" {
-			p.WithPattern(param.Regex)
-		}
-	}
-
-	return p
-}
-
-func buildResponse(e restful.ResponseError, cfg Config) (r spec.Response) {
-	r.Description = e.Message
-	if e.Model != nil {
-		st := reflect.TypeOf(e.Model)
-		if st.Kind() == reflect.Ptr {
-			// For pointer type, use element type as the key; otherwise we'll
-			// endup with '#/definitions/*Type' which violates openapi spec.
-			st = st.Elem()
-		}
-		r.Schema = new(spec.Schema)
-		if st.Kind() == reflect.Array || st.Kind() == reflect.Slice {
-			modelName := definitionBuilder{}.keyFrom(st.Elem())
-			r.Schema.Type = []string{"array"}
-			r.Schema.Items = &spec.SchemaOrArray{
-				Schema: &spec.Schema{},
-			}
-			isPrimitive := isPrimitiveType(modelName)
-			if isPrimitive {
-				mapped := jsonSchemaType(modelName)
-				r.Schema.Items.Schema.Type = []string{mapped}
-			} else {
-				r.Schema.Items.Schema.Ref = spec.MustCreateRef("#/definitions/" + modelName)
-			}
-		} else {
-			modelName := st.Kind().String()
-			if !isPrimitiveType(modelName) {
-				modelName = definitionBuilder{}.keyFrom(st)
-			}
-			if isPrimitiveType(modelName) {
-				// If the response is a primitive type, then don't reference any definitions.
-				// Instead, set the schema's "type" to the model name.
-				r.Schema.AddType(modelName, "")
-			} else {
-				modelName := definitionBuilder{}.keyFrom(st)
-				r.Schema.Ref = spec.MustCreateRef("#/definitions/" + modelName)
-			}
-		}
-	}
-	return r
 }
 
 // stripTags takes a snippet of HTML and returns only the text content.

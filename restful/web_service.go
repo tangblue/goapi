@@ -93,6 +93,9 @@ func (w *WebService) ParamPath(root string, parameters ...*Parameter) *WebServic
 	if len(parameters) > 0 {
 		var s []interface{} = make([]interface{}, len(parameters))
 		for i, v := range parameters {
+			if v.Data().Kind != PathParameterKind {
+				panic("Bad parameter kind")
+			}
 			s[i] = v
 		}
 		root = fmt.Sprintf(root, s...)
@@ -105,12 +108,12 @@ func (w *WebService) ParamPath(root string, parameters ...*Parameter) *WebServic
 	return w.Path(root)
 }
 
-// Param adds a PathParameter to document parameters used in the root path.
-func (w *WebService) Param(parameter *Parameter) *WebService {
+// Params adds a PathParameter to document parameters used in the root path.
+func (w *WebService) Params(parameters ...*Parameter) *WebService {
 	if w.pathParameters == nil {
 		w.pathParameters = []*Parameter{}
 	}
-	w.pathParameters = append(w.pathParameters, parameter)
+	w.pathParameters = append(w.pathParameters, parameters...)
 	return w
 }
 

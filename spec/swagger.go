@@ -78,8 +78,8 @@ type SwaggerProps struct {
 	BasePath            string                 `json:"basePath,omitempty"` // must start with a leading "/"
 	Paths               *Paths                 `json:"paths"`              // required
 	Definitions         Definitions            `json:"definitions,omitempty"`
-	Parameters          map[string]Parameter   `json:"parameters,omitempty"`
-	Responses           map[string]Response    `json:"responses,omitempty"`
+	Parameters          RefParameters          `json:"parameters,omitempty"`
+	Responses           RefResponses           `json:"responses,omitempty"`
 	SecurityDefinitions SecurityDefinitions    `json:"securityDefinitions,omitempty"`
 	Security            []map[string][]string  `json:"security,omitempty"`
 	Tags                []Tag                  `json:"tags,omitempty"`
@@ -188,6 +188,8 @@ func (s *SchemaOrStringArray) UnmarshalJSON(data []byte) error {
 //
 // For more information: http://goo.gl/8us55a#definitionsObject
 type Definitions map[string]Schema
+type RefParameters map[string]Parameter
+type RefResponses map[string]Response
 
 // SecurityDefinitions a declaration of the security schemes available to be used in the specification.
 // This does not enforce the security schemes on the operations and only serves to provide

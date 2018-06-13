@@ -186,6 +186,10 @@ func (r *Response) WriteServiceError(httpStatus int, err ServiceError) error {
 	return r.WriteHeaderAndEntity(httpStatus, err)
 }
 
+func (r *Response) WriteErrorResponse(e *ResponseError) error {
+	return r.WriteErrorString(e.Code, e.Message)
+}
+
 // WriteErrorString is a convenience method for an error status with the actual error
 func (r *Response) WriteErrorString(httpStatus int, errorReason string) error {
 	if r.err == nil {

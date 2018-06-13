@@ -34,9 +34,10 @@ type RouteBuilder struct {
 	operation               string
 	readSample, writeSample interface{}
 	parameters              []*Parameter
-	errorMap                map[int]ResponseError
+	errorMap                map[int]*ResponseError
 	metadata                map[string]interface{}
 	deprecated              bool
+	securities              []map[string][]string
 }
 
 // Do evaluates each argument with the RouteBuilder itself.
@@ -58,6 +59,14 @@ func (b *RouteBuilder) Do(oneArgBlocks ...func(*RouteBuilder)) *RouteBuilder {
 // If this route is matched with the incoming Http Request then call this function with the *Request,*Response pair. Required.
 func (b *RouteBuilder) Handler(function RouteFunction) *RouteBuilder {
 	b.function = function
+	return b
+}
+
+func (b *RouteBuilder) Security(name string, scopes []string) *RouteBuilder {
+	if b.securities == nil {
+		b.securities = []map[string][]string{}
+	}
+	b.securities = append(b.securities, map[string][]string{name: scopes})
 	return b
 }
 
@@ -132,7 +141,7 @@ func (b *RouteBuilder) Read(sample interface{}, optionalDescription ...string) *
 	bodyParameter.beBody()
 	bodyParameter.Required(true)
 	bodyParameter.DataType(sample)
-	b.Param(bodyParameter)
+	b.Params(bodyParameter)
 	return b
 }
 
@@ -153,12 +162,12 @@ func (b *RouteBuilder) Write(sample interface{}) *RouteBuilder {
 	return b
 }
 
-// Param allows you to document the parameters of the Route. It adds a new Parameter (does not check for duplicates).
-func (b *RouteBuilder) Param(parameter *Parameter) *RouteBuilder {
+// Params allows you to document the parameters of the Route. It adds a new Parameter (does not check for duplicates).
+func (b *RouteBuilder) Params(parameters ...*Parameter) *RouteBuilder {
 	if b.parameters == nil {
 		b.parameters = []*Parameter{}
 	}
-	b.parameters = append(b.parameters, parameter)
+	b.parameters = append(b.parameters, parameters...)
 	return b
 }
 
@@ -172,7 +181,7 @@ func (b *RouteBuilder) Operation(name string) *RouteBuilder {
 // Return allows you to document what responses (errors or regular) can be expected.
 // The model parameter is optional ; either pass a struct instance or use nil if not applicable.
 func (b *RouteBuilder) Return(code int, message string, model interface{}) *RouteBuilder {
-	err := ResponseError{
+	err := &ResponseError{
 		Code:      code,
 		Message:   message,
 		Model:     model,
@@ -180,7 +189,7 @@ func (b *RouteBuilder) Return(code int, message string, model interface{}) *Rout
 	}
 	// lazy init because there is no NewRouteBuilder (yet)
 	if b.errorMap == nil {
-		b.errorMap = map[int]ResponseError{}
+		b.errorMap = map[int]*ResponseError{}
 	}
 	b.errorMap[code] = err
 	return b
@@ -192,11 +201,22 @@ func (b *RouteBuilder) DefaultReturn(message string, model interface{}) *RouteBu
 	// Modify the ResponseError just added/updated
 	re := b.errorMap[0]
 	// errorMap is initialized
-	b.errorMap[0] = ResponseError{
+	b.errorMap[0] = &ResponseError{
 		Code:      re.Code,
 		Message:   re.Message,
 		Model:     re.Model,
 		IsDefault: true,
+	}
+	return b
+}
+
+func (b *RouteBuilder) ReturnResponses(errs ...*ResponseError) *RouteBuilder {
+	// lazy init because there is no NewRouteBuilder (yet)
+	if b.errorMap == nil {
+		b.errorMap = map[int]*ResponseError{}
+	}
+	for _, e := range errs {
+		b.errorMap[e.Code] = e
 	}
 	return b
 }
@@ -222,6 +242,21 @@ type ResponseError struct {
 	Message   string
 	Model     interface{}
 	IsDefault bool
+	RefName   string
+}
+
+func NewResponseError(code int, message string, model interface{}) *ResponseError {
+	return &ResponseError{
+		Code:      code,
+		Message:   message,
+		Model:     model,
+		IsDefault: false,
+	}
+}
+
+func (r *ResponseError) SetRefName(refName string) *ResponseError {
+	r.RefName = refName
+	return r
 }
 
 func (b *RouteBuilder) servicePath(path string) *RouteBuilder {
@@ -303,7 +338,8 @@ func (b *RouteBuilder) Build() Route {
 		ReadSample:     b.readSample,
 		WriteSample:    b.writeSample,
 		Metadata:       b.metadata,
-		Deprecated:     b.deprecated}
+		Deprecated:     b.deprecated,
+		Security:       b.securities}
 	route.postBuild()
 	return route
 }

@@ -37,7 +37,7 @@ type Route struct {
 	Notes                   string
 	Operation               string
 	ParameterDocs           []*Parameter
-	ResponseErrors          map[int]ResponseError
+	ResponseErrors          map[int]*ResponseError
 	ReadSample, WriteSample interface{} // structs that model an example request or response payload
 
 	// Extra information used to store custom information about the route.
@@ -45,6 +45,7 @@ type Route struct {
 
 	// marks a route as deprecated
 	Deprecated bool
+	Security   []map[string][]string
 }
 
 // Initialize for Route

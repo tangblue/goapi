@@ -66,10 +66,12 @@ type ParameterData struct {
 	AllowMultiple                 bool
 	DefaultValue                  interface{}
 	MinValue, MaxValue            interface{}
+	Enum                          []interface{}
 	MinLength, MaxLength          int
 	CollectionFormat              string
 	Regex                         string
 	regex                         *regexp.Regexp
+	RefName                       string
 }
 
 // Data returns the state of the Parameter
@@ -172,6 +174,11 @@ func (p *Parameter) Regex(regex string) *Parameter {
 	return p
 }
 
+func (p *Parameter) SetRefName(refName string) *Parameter {
+	p.data.RefName = refName
+	return p
+}
+
 func (p *Parameter) ValueRange(min, max interface{}) *Parameter {
 	if reflect.TypeOf(min) != reflect.TypeOf(p.data.DefaultValue) {
 		panic("bad type: min")
@@ -181,6 +188,21 @@ func (p *Parameter) ValueRange(min, max interface{}) *Parameter {
 	}
 	p.data.MinValue = min
 	p.data.MaxValue = max
+	return p
+}
+
+func (p *Parameter) WithEnum(values ...interface{}) *Parameter {
+	if p.data.Enum == nil {
+		p.data.Enum = []interface{}{}
+	}
+
+	dt := reflect.TypeOf(p.data.DefaultValue)
+	for _, v := range values {
+		if reflect.TypeOf(v) != dt {
+			panic("bad type: enum")
+		}
+		p.data.Enum = append(p.data.Enum, v)
+	}
 	return p
 }
 
@@ -220,10 +242,10 @@ var (
 	errTooShort   = errors.New("too short")
 	errTooLong    = errors.New("too long")
 	errBadPattern = errors.New("bad pattern")
+	errBadEnum    = errors.New("bad enum")
 )
 
 func (p *Parameter) getValue(s string) (interface{}, error) {
-
 	switch reflect.TypeOf(p.data.DefaultValue).Kind() {
 	case reflect.String:
 		return p.ValidateValueString(s, nil)
@@ -255,6 +277,22 @@ func (p *Parameter) getValue(s string) (interface{}, error) {
 	return p.data.DefaultValue, errors.New("unknown type")
 }
 
+func (p *Parameter) ValidateEnum(v interface{}) bool {
+	if p.data.Enum == nil {
+		return true
+	}
+
+	ok := false
+	for _, e := range p.data.Enum {
+		if v == e {
+			ok = true
+			break
+		}
+	}
+
+	return ok
+}
+
 func (p *Parameter) ValidateValueString(v string, err error) (interface{}, error) {
 	dv := p.data.DefaultValue
 	if err != nil {
@@ -274,10 +312,14 @@ func (p *Parameter) ValidateValueString(v string, err error) (interface{}, error
 		}
 	}
 
-	ret := reflect.New(reflect.TypeOf(dv))
-	ret.Elem().SetString(v)
+	retElem := reflect.New(reflect.TypeOf(dv)).Elem()
+	retElem.SetString(v)
+	ret := retElem.Interface()
+	if !p.ValidateEnum(ret) {
+		return dv, errBadEnum
+	}
 
-	return ret.Elem().Interface(), err
+	return ret, err
 }
 
 func (p *Parameter) ValidateValueInt(v int64, err error) (interface{}, error) {
@@ -293,10 +335,14 @@ func (p *Parameter) ValidateValueInt(v int64, err error) (interface{}, error) {
 		return dv, errGTMax
 	}
 
-	ret := reflect.New(reflect.TypeOf(dv))
-	ret.Elem().SetInt(v)
+	retElem := reflect.New(reflect.TypeOf(dv)).Elem()
+	retElem.SetInt(v)
+	ret := retElem.Interface()
+	if !p.ValidateEnum(ret) {
+		return dv, errBadEnum
+	}
 
-	return ret.Elem().Interface(), err
+	return ret, err
 }
 
 func (p *Parameter) ValidateValueUint(v uint64, err error) (interface{}, error) {
@@ -312,10 +358,14 @@ func (p *Parameter) ValidateValueUint(v uint64, err error) (interface{}, error) 
 		return dv, errGTMax
 	}
 
-	ret := reflect.New(reflect.TypeOf(dv))
-	ret.Elem().SetUint(v)
+	retElem := reflect.New(reflect.TypeOf(dv)).Elem()
+	retElem.SetUint(v)
+	ret := retElem.Interface()
+	if !p.ValidateEnum(ret) {
+		return dv, errBadEnum
+	}
 
-	return ret.Elem().Interface(), err
+	return ret, err
 }
 
 func (p *Parameter) ValidateValueBool(v bool, err error) (interface{}, error) {
@@ -325,10 +375,14 @@ func (p *Parameter) ValidateValueBool(v bool, err error) (interface{}, error) {
 		return dv, err
 	}
 
-	ret := reflect.New(reflect.TypeOf(dv))
-	ret.Elem().SetBool(v)
+	retElem := reflect.New(reflect.TypeOf(dv)).Elem()
+	retElem.SetBool(v)
+	ret := retElem.Interface()
+	if !p.ValidateEnum(ret) {
+		return dv, errBadEnum
+	}
 
-	return ret.Elem().Interface(), err
+	return ret, err
 }
 
 func (p *Parameter) ValidateValueFloat(v float64, err error) (interface{}, error) {
@@ -344,8 +398,12 @@ func (p *Parameter) ValidateValueFloat(v float64, err error) (interface{}, error
 		return dv, errGTMax
 	}
 
-	ret := reflect.New(reflect.TypeOf(dv))
-	ret.Elem().SetFloat(v)
+	retElem := reflect.New(reflect.TypeOf(dv)).Elem()
+	retElem.SetFloat(v)
+	ret := retElem.Interface()
+	if !p.ValidateEnum(ret) {
+		return dv, errBadEnum
+	}
 
-	return ret.Elem().Interface(), err
+	return ret, err
 }

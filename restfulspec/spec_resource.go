@@ -5,6 +5,11 @@ import (
 	"github.com/tangblue/goapi/spec"
 )
 
+type swaggerBuilder struct {
+	param parameterBuilder
+	resp  responseBuilder
+}
+
 // NewOpenAPIService returns a new WebService that provides the API documentation of all services
 // conform the OpenAPI documentation specifcation.
 func NewOpenAPIService(config Config) *restful.WebService {
@@ -27,9 +32,10 @@ func BuildSwagger(config Config) *spec.Swagger {
 	// collect paths and model definitions to build Swagger object.
 	paths := &spec.Paths{Paths: map[string]spec.PathItem{}}
 	definitions := spec.Definitions{}
+	sb := &swaggerBuilder{}
 
 	for _, each := range config.WebServices {
-		for path, item := range buildPaths(each, config).Paths {
+		for path, item := range buildPaths(each, config, sb).Paths {
 			paths.Paths[path] = item
 		}
 		for name, def := range buildDefinitions(each, config) {
@@ -41,6 +47,8 @@ func BuildSwagger(config Config) *spec.Swagger {
 			Swagger:     "2.0",
 			Paths:       paths,
 			Definitions: definitions,
+			Parameters:  sb.param.getRefParameters(),
+			Responses:   sb.resp.getRefResponses(),
 		},
 	}
 	if config.PostBuildSwaggerObjectHandler != nil {

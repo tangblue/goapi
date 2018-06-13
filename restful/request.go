@@ -52,14 +52,16 @@ func (r *Request) GetParameter(p *Parameter) (interface{}, error) {
 	case PathParameterKind:
 		v, ok = r.pathParameters[name]
 	case QueryParameterKind, FormParameterKind:
-		va, ok := r.Request.Form[name]
-		if ok {
+		va, found := r.Request.Form[name]
+		if found {
 			v = va[0]
+			ok = true
 		}
 	case BodyParameterKind:
-		va, ok := r.Request.PostForm[name]
-		if ok {
+		va, found := r.Request.PostForm[name]
+		if found {
 			v = va[0]
+			ok = true
 		}
 	case HeaderParameterKind:
 		v, ok = r.Request.Header.Get(name), true

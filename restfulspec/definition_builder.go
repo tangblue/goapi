@@ -211,14 +211,18 @@ func (b definitionBuilder) buildProperty(field reflect.StructField, model *spec.
 		return jsonName, modelDescription, prop
 	}
 	modelType := b.keyFrom(fieldType)
-	prop.Ref = spec.MustCreateRef("#/definitions/" + modelType)
+	prop.Ref = b.createRef(modelType)
 
 	if fieldType.Name() == "" { // override type of anonymous structs
 		nestedTypeName := modelName + "." + jsonName
-		prop.Ref = spec.MustCreateRef("#/definitions/" + nestedTypeName)
+		prop.Ref = b.createRef(nestedTypeName)
 		b.addModel(fieldType, nestedTypeName)
 	}
 	return jsonName, modelDescription, prop
+}
+
+func (b definitionBuilder) createRef(typeName string) spec.Ref {
+	return spec.MustCreateRef("#/definitions/" + typeName)
 }
 
 func hasNamedJSONTag(field reflect.StructField) bool {
@@ -242,7 +246,7 @@ func (b definitionBuilder) buildStructTypeProperty(field reflect.StructField, js
 		// anonymous
 		anonType := model.ID + "." + jsonName
 		b.addModel(fieldType, anonType)
-		prop.Ref = spec.MustCreateRef("#/definitions/" + anonType)
+		prop.Ref = b.createRef(anonType)
 		return jsonName, prop
 	}
 
@@ -281,7 +285,7 @@ func (b definitionBuilder) buildStructTypeProperty(field reflect.StructField, js
 	// simple struct
 	b.addModel(fieldType, "")
 	var pType = b.keyFrom(fieldType)
-	prop.Ref = spec.MustCreateRef("#/definitions/" + pType)
+	prop.Ref = b.createRef(pType)
 	return jsonName, prop
 }
 
@@ -304,7 +308,7 @@ func (b definitionBuilder) buildArrayTypeProperty(field reflect.StructField, jso
 		mapped := b.jsonSchemaType(elemTypeName)
 		prop.Items.Schema.Type = []string{mapped}
 	} else {
-		prop.Items.Schema.Ref = spec.MustCreateRef("#/definitions/" + elemTypeName)
+		prop.Items.Schema.Ref = b.createRef(elemTypeName)
 	}
 	// add|overwrite model for element type
 	if fieldType.Elem().Kind() == reflect.Ptr {
@@ -335,7 +339,7 @@ func (b definitionBuilder) buildMapTypeProperty(field reflect.StructField, jsonN
 			mapped := b.jsonSchemaType(elemTypeName)
 			prop.AdditionalProperties.Schema.Type = []string{mapped}
 		} else {
-			prop.AdditionalProperties.Schema.Ref = spec.MustCreateRef("#/definitions/" + elemTypeName)
+			prop.AdditionalProperties.Schema.Ref = b.createRef(elemTypeName)
 		}
 		// add|overwrite model for element type
 		if fieldType.Elem().Kind() == reflect.Ptr {
@@ -365,7 +369,7 @@ func (b definitionBuilder) buildPointerTypeProperty(field reflect.StructField, j
 			primName := b.jsonSchemaType(elemName)
 			prop.Items.Schema.Type = []string{primName}
 		} else {
-			prop.Items.Schema.Ref = spec.MustCreateRef("#/definitions/" + elemName)
+			prop.Items.Schema.Ref = b.createRef(elemName)
 		}
 		if !isPrimitive {
 			// add|overwrite model for element type
@@ -380,11 +384,11 @@ func (b definitionBuilder) buildPointerTypeProperty(field reflect.StructField, j
 			prop.Format = b.jsonSchemaFormat(fieldTypeName)
 			return jsonName, prop
 		}
-		prop.Ref = spec.MustCreateRef("#/definitions/" + pType)
+		prop.Ref = b.createRef(pType)
 		elemName := ""
 		if fieldType.Elem().Name() == "" {
 			elemName = modelName + "." + jsonName
-			prop.Ref = spec.MustCreateRef("#/definitions/" + elemName)
+			prop.Ref = b.createRef(elemName)
 		}
 		b.addModel(fieldType.Elem(), elemName)
 	}
