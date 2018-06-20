@@ -6,8 +6,17 @@ import (
 )
 
 type swaggerBuilder struct {
+	def   definitionBuilder
 	param parameterBuilder
 	resp  responseBuilder
+}
+
+func (b *swaggerBuilder) buildParameter(restfulParam *restful.Parameter, pattern string) spec.Parameter {
+	return b.param.build(restfulParam, pattern, &b.def)
+}
+
+func (b *swaggerBuilder) buildResponse(e *restful.ResponseError) spec.Response {
+	return b.resp.build(e, &b.def)
 }
 
 // NewOpenAPIService returns a new WebService that provides the API documentation of all services
@@ -31,24 +40,21 @@ func NewOpenAPIService(config Config) *restful.WebService {
 func BuildSwagger(config Config) *spec.Swagger {
 	// collect paths and model definitions to build Swagger object.
 	paths := &spec.Paths{Paths: map[string]spec.PathItem{}}
-	definitions := spec.Definitions{}
 	sb := &swaggerBuilder{}
+	sb.def.Definitions = spec.Definitions{}
 
 	for _, each := range config.WebServices {
 		for path, item := range buildPaths(each, config, sb).Paths {
 			paths.Paths[path] = item
-		}
-		for name, def := range buildDefinitions(each, config) {
-			definitions[name] = def
 		}
 	}
 	swagger := &spec.Swagger{
 		SwaggerProps: spec.SwaggerProps{
 			Swagger:     "2.0",
 			Paths:       paths,
-			Definitions: definitions,
-			Parameters:  sb.param.getRefParameters(),
-			Responses:   sb.resp.getRefResponses(),
+			Definitions: sb.def.getDefinitions(),
+			Parameters:  sb.param.getRefParameters(&sb.def),
+			Responses:   sb.resp.getRefResponses(&sb.def),
 		},
 	}
 	if config.PostBuildSwaggerObjectHandler != nil {

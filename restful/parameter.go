@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"regexp"
 	"strconv"
+
+	"github.com/tangblue/goapi/spec"
 )
 
 // Copyright 2013 Ernest Micklei. All rights reserved.
@@ -53,114 +55,64 @@ func (cf CollectionFormat) String() string {
 // Parameter is for documententing the parameter used in a Http Request
 // ParameterData kinds are Path,Query and Body
 type Parameter struct {
-	data *ParameterData
-}
-
-// ParameterData represents the state of a Parameter.
-// It is made public to make it accessible to e.g. the Swagger package.
-type ParameterData struct {
-	Name, Description, DataFormat string
-	Kind                          int
-	Required                      bool
-	AllowableValues               map[string]string
-	AllowMultiple                 bool
-	DefaultValue                  interface{}
-	MinValue, MaxValue            interface{}
-	Enum                          []interface{}
-	MinLength, MaxLength          int
-	CollectionFormat              string
-	Regex                         string
-	regex                         *regexp.Regexp
-	RefName                       string
-}
-
-// Data returns the state of the Parameter
-func (p *Parameter) Data() ParameterData {
-	return *p.data
+	spec.Parameter
+	Model   interface{}
+	regex   *regexp.Regexp
+	RefName string
 }
 
 func (p *Parameter) String() string {
-	path := p.data.Name
-	if p.data.Regex != "" {
-		path += string(':') + p.data.Regex
+	path := p.Name
+	if p.Pattern != "" {
+		path += string(':') + p.Pattern
 	}
 
 	return path
 }
 
-// Kind returns the parameter type indicator (see const for valid values)
-func (p *Parameter) Kind() int {
-	return p.data.Kind
+func QueryParameter(name, description string) *Parameter {
+	return &Parameter{
+		Parameter: *spec.QueryParam(name).WithDescription(description),
+		Model:     "",
+	}
 }
 
-func (p *Parameter) bePath() *Parameter {
-	p.data.Kind = PathParameterKind
-	return p
-}
-func (p *Parameter) beQuery() *Parameter {
-	p.data.Kind = QueryParameterKind
-	return p
-}
-func (p *Parameter) beBody() *Parameter {
-	p.data.Kind = BodyParameterKind
-	return p
+func HeaderParameter(name, description string) *Parameter {
+	return &Parameter{
+		Parameter: *spec.HeaderParam(name).WithDescription(description),
+		Model:     "",
+	}
 }
 
-func (p *Parameter) beHeader() *Parameter {
-	p.data.Kind = HeaderParameterKind
-	return p
+func PathParameter(name, description string) *Parameter {
+	return &Parameter{
+		Parameter: *spec.PathParam(name).WithDescription(description),
+		Model:     "",
+	}
 }
 
-func (p *Parameter) beForm() *Parameter {
-	p.data.Kind = FormParameterKind
-	return p
+func BodyParameter(name, description string) *Parameter {
+	return &Parameter{
+		Parameter: *spec.BodyParam(name, nil).WithDescription(description),
+		Model:     "",
+	}
 }
 
-// Required sets the required field and returns the receiver
-func (p *Parameter) Required(required bool) *Parameter {
-	p.data.Required = required
-	return p
-}
-
-// AllowMultiple sets the allowMultiple field and returns the receiver
-func (p *Parameter) AllowMultiple(multiple bool) *Parameter {
-	p.data.AllowMultiple = multiple
-	return p
-}
-
-// AllowableValues sets the allowableValues field and returns the receiver
-func (p *Parameter) AllowableValues(values map[string]string) *Parameter {
-	p.data.AllowableValues = values
-	return p
-}
-
-// DataType sets the dataType field and returns the receiver
-func (p *Parameter) DataType(val interface{}) *Parameter {
-	p.data.DefaultValue = val
-	return p
-}
-
-// DataFormat sets the dataFormat field for Swagger UI
-func (p *Parameter) DataFormat(formatName string) *Parameter {
-	p.data.DataFormat = formatName
-	return p
-}
-
-// DefaultValue sets the default value field and returns the receiver
-func (p *Parameter) DefaultValue(val interface{}) *Parameter {
-	p.data.DefaultValue = val
-	return p
-}
-
-// Description sets the description value field and returns the receiver
-func (p *Parameter) Description(doc string) *Parameter {
-	p.data.Description = doc
-	return p
+func FormDataParameter(name, description string) *Parameter {
+	return &Parameter{
+		Parameter: *spec.FormDataParam(name).WithDescription(description),
+		Model:     "",
+	}
 }
 
 // CollectionFormat sets the collection format for an array type
-func (p *Parameter) CollectionFormat(format CollectionFormat) *Parameter {
-	p.data.CollectionFormat = format.String()
+func (p *Parameter) WithCollectionFormat(format CollectionFormat) *Parameter {
+	p.CollectionFormat = format.String()
+	return p
+}
+
+func (p *Parameter) DataType(model interface{}) *Parameter {
+	p.Model = model
 	return p
 }
 
@@ -169,71 +121,14 @@ func (p *Parameter) Regex(regex string) *Parameter {
 	if err != nil {
 		panic("Bad regex: " + regex)
 	}
-	p.data.Regex = regex
-	p.data.regex = r
+	p.Pattern = regex
+	p.regex = r
 	return p
 }
 
 func (p *Parameter) SetRefName(refName string) *Parameter {
-	p.data.RefName = refName
+	p.RefName = refName
 	return p
-}
-
-func (p *Parameter) ValueRange(min, max interface{}) *Parameter {
-	if reflect.TypeOf(min) != reflect.TypeOf(p.data.DefaultValue) {
-		panic("bad type: min")
-	}
-	if reflect.TypeOf(max) != reflect.TypeOf(p.data.DefaultValue) {
-		panic("bad type: max")
-	}
-	p.data.MinValue = min
-	p.data.MaxValue = max
-	return p
-}
-
-func (p *Parameter) WithEnum(values ...interface{}) *Parameter {
-	if p.data.Enum == nil {
-		p.data.Enum = []interface{}{}
-	}
-
-	dt := reflect.TypeOf(p.data.DefaultValue)
-	for _, v := range values {
-		if reflect.TypeOf(v) != dt {
-			panic("bad type: enum")
-		}
-		p.data.Enum = append(p.data.Enum, v)
-	}
-	return p
-}
-
-func (p *Parameter) LengthRange(min, max int) *Parameter {
-	p.data.MinLength = min
-	p.data.MaxLength = max
-	return p
-}
-
-func (p *Parameter) getName() string {
-	return p.data.Name
-}
-
-func (p *Parameter) GetDataTypeName() string {
-	return reflect.TypeOf(p.data.DefaultValue).String()
-}
-
-func (p *Parameter) GetDataType() interface{} {
-	return p.data.DefaultValue
-}
-
-func (p *Parameter) getKind() int {
-	return p.data.Kind
-}
-
-func (p *Parameter) isRequired() bool {
-	return p.data.Required
-}
-
-func (p *Parameter) getDefaultValue() interface{} {
-	return p.data.DefaultValue
 }
 
 var (
@@ -246,164 +141,153 @@ var (
 )
 
 func (p *Parameter) getValue(s string) (interface{}, error) {
-	switch reflect.TypeOf(p.data.DefaultValue).Kind() {
+	switch reflect.TypeOf(p.Model).Kind() {
 	case reflect.String:
-		return p.ValidateValueString(s, nil)
+		return p.validateValueString(s, nil)
 	case reflect.Int8:
-		return p.ValidateValueInt(strconv.ParseInt(s, 0, 8))
+		return p.validateValueInt(strconv.ParseInt(s, 0, 8))
 	case reflect.Int16:
-		return p.ValidateValueInt(strconv.ParseInt(s, 0, 16))
+		return p.validateValueInt(strconv.ParseInt(s, 0, 16))
 	case reflect.Int, reflect.Int32:
-		return p.ValidateValueInt(strconv.ParseInt(s, 0, 32))
+		return p.validateValueInt(strconv.ParseInt(s, 0, 32))
 	case reflect.Int64:
-		return p.ValidateValueInt(strconv.ParseInt(s, 0, 64))
+		return p.validateValueInt(strconv.ParseInt(s, 0, 64))
 
 	case reflect.Uint8:
-		return p.ValidateValueUint(strconv.ParseUint(s, 0, 8))
+		return p.validateValueUint(strconv.ParseUint(s, 0, 8))
 	case reflect.Uint16:
-		return p.ValidateValueUint(strconv.ParseUint(s, 0, 16))
+		return p.validateValueUint(strconv.ParseUint(s, 0, 16))
 	case reflect.Uint, reflect.Uint32:
-		return p.ValidateValueUint(strconv.ParseUint(s, 0, 32))
+		return p.validateValueUint(strconv.ParseUint(s, 0, 32))
 	case reflect.Uint64:
-		return p.ValidateValueUint(strconv.ParseUint(s, 0, 64))
+		return p.validateValueUint(strconv.ParseUint(s, 0, 64))
 
 	case reflect.Bool:
-		return p.ValidateValueBool(strconv.ParseBool(s))
+		return p.validateValueBool(strconv.ParseBool(s))
 	case reflect.Float32:
-		return p.ValidateValueFloat(strconv.ParseFloat(s, 32))
+		return p.validateValueFloat(strconv.ParseFloat(s, 32))
 	case reflect.Float64:
-		return p.ValidateValueFloat(strconv.ParseFloat(s, 64))
+		return p.validateValueFloat(strconv.ParseFloat(s, 64))
 	}
-	return p.data.DefaultValue, errors.New("unknown type")
+	return nil, errors.New("unknown type")
 }
 
-func (p *Parameter) ValidateEnum(v interface{}) bool {
-	if p.data.Enum == nil {
+func (p *Parameter) validateEnum(v interface{}) bool {
+	if p.Enum == nil {
 		return true
 	}
 
-	ok := false
-	for _, e := range p.data.Enum {
+	for _, e := range p.Enum {
 		if v == e {
-			ok = true
-			break
+			return true
 		}
 	}
 
-	return ok
+	return false
 }
 
-func (p *Parameter) ValidateValueString(v string, err error) (interface{}, error) {
-	dv := p.data.DefaultValue
+func (p *Parameter) validateValueString(v string, err error) (interface{}, error) {
 	if err != nil {
-		return dv, err
+		return nil, err
 	}
 
-	if p.data.MinLength != 0 || p.data.MaxLength != 0 {
-		if len(v) < p.data.MinLength {
-			return dv, errTooShort
-		} else if len(v) > p.data.MaxLength {
-			return dv, errTooLong
+	if p.MinLength != nil || p.MaxLength != nil {
+		if len(v) < *p.MinLength {
+			return nil, errTooShort
+		} else if len(v) > *p.MaxLength {
+			return nil, errTooLong
 		}
 	}
-	if p.data.regex != nil {
-		if !p.data.regex.MatchString(v) {
-			return dv, errBadPattern
+	if p.regex != nil {
+		if !p.regex.MatchString(v) {
+			return nil, errBadPattern
 		}
 	}
 
-	retElem := reflect.New(reflect.TypeOf(dv)).Elem()
+	retElem := reflect.New(reflect.TypeOf(p.Model)).Elem()
 	retElem.SetString(v)
 	ret := retElem.Interface()
-	if !p.ValidateEnum(ret) {
-		return dv, errBadEnum
+	if !p.validateEnum(ret) {
+		return nil, errBadEnum
 	}
 
-	return ret, err
+	return ret, nil
 }
 
-func (p *Parameter) ValidateValueInt(v int64, err error) (interface{}, error) {
-	dv := p.data.DefaultValue
-
+func (p *Parameter) validateValueInt(v int64, err error) (interface{}, error) {
 	if err != nil {
-		return dv, err
+		return nil, err
 	}
 
-	if p.data.MinValue != nil && v < reflect.ValueOf(p.data.MinValue).Int() {
-		return dv, errLTMin
-	} else if p.data.MaxValue != nil && v > reflect.ValueOf(p.data.MaxValue).Int() {
-		return dv, errGTMax
+	if p.Minimum != nil && v < reflect.ValueOf(p.Minimum).Int() {
+		return nil, errLTMin
+	} else if p.Maximum != nil && v > reflect.ValueOf(p.Maximum).Int() {
+		return nil, errGTMax
 	}
 
-	retElem := reflect.New(reflect.TypeOf(dv)).Elem()
+	retElem := reflect.New(reflect.TypeOf(p.Model)).Elem()
 	retElem.SetInt(v)
 	ret := retElem.Interface()
-	if !p.ValidateEnum(ret) {
-		return dv, errBadEnum
+	if !p.validateEnum(ret) {
+		return nil, errBadEnum
 	}
 
-	return ret, err
+	return ret, nil
 }
 
-func (p *Parameter) ValidateValueUint(v uint64, err error) (interface{}, error) {
-	dv := p.data.DefaultValue
-
+func (p *Parameter) validateValueUint(v uint64, err error) (interface{}, error) {
 	if err != nil {
-		return dv, err
+		return nil, err
 	}
 
-	if p.data.MinValue != nil && v < reflect.ValueOf(p.data.MinValue).Uint() {
-		return dv, errLTMin
-	} else if p.data.MaxValue != nil && v > reflect.ValueOf(p.data.MaxValue).Uint() {
-		return dv, errGTMax
+	if p.Minimum != nil && v < reflect.ValueOf(p.Minimum).Uint() {
+		return nil, errLTMin
+	} else if p.Maximum != nil && v > reflect.ValueOf(p.Maximum).Uint() {
+		return nil, errGTMax
 	}
 
-	retElem := reflect.New(reflect.TypeOf(dv)).Elem()
+	retElem := reflect.New(reflect.TypeOf(p.Model)).Elem()
 	retElem.SetUint(v)
 	ret := retElem.Interface()
-	if !p.ValidateEnum(ret) {
-		return dv, errBadEnum
+	if !p.validateEnum(ret) {
+		return nil, errBadEnum
 	}
 
-	return ret, err
+	return ret, nil
 }
 
-func (p *Parameter) ValidateValueBool(v bool, err error) (interface{}, error) {
-	dv := p.data.DefaultValue
-
+func (p *Parameter) validateValueBool(v bool, err error) (interface{}, error) {
 	if err != nil {
-		return dv, err
+		return nil, err
 	}
 
-	retElem := reflect.New(reflect.TypeOf(dv)).Elem()
+	retElem := reflect.New(reflect.TypeOf(p.Model)).Elem()
 	retElem.SetBool(v)
 	ret := retElem.Interface()
-	if !p.ValidateEnum(ret) {
-		return dv, errBadEnum
+	if !p.validateEnum(ret) {
+		return nil, errBadEnum
 	}
 
-	return ret, err
+	return ret, nil
 }
 
-func (p *Parameter) ValidateValueFloat(v float64, err error) (interface{}, error) {
-	dv := p.data.DefaultValue
-
+func (p *Parameter) validateValueFloat(v float64, err error) (interface{}, error) {
 	if err != nil {
-		return dv, err
+		return nil, err
 	}
 
-	if p.data.MinValue != nil && v < reflect.ValueOf(p.data.MinValue).Float() {
-		return dv, errLTMin
-	} else if p.data.MaxValue != nil && v > reflect.ValueOf(p.data.MaxValue).Float() {
-		return dv, errGTMax
+	if p.Minimum != nil && v < reflect.ValueOf(p.Minimum).Float() {
+		return nil, errLTMin
+	} else if p.Maximum != nil && v > reflect.ValueOf(p.Maximum).Float() {
+		return nil, errGTMax
 	}
 
-	retElem := reflect.New(reflect.TypeOf(dv)).Elem()
+	retElem := reflect.New(reflect.TypeOf(p.Model)).Elem()
 	retElem.SetFloat(v)
 	ret := retElem.Interface()
-	if !p.ValidateEnum(ret) {
-		return dv, errBadEnum
+	if !p.validateEnum(ret) {
+		return nil, errBadEnum
 	}
 
-	return ret, err
+	return ret, nil
 }

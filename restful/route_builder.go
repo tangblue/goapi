@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 
 	"github.com/tangblue/goapi/restful/log"
+	"github.com/tangblue/goapi/spec"
 )
 
 // RouteBuilder is a helper to construct Routes.
@@ -137,9 +138,7 @@ func (b *RouteBuilder) Read(sample interface{}, optionalDescription ...string) *
 		description = optionalDescription[0]
 	}
 	b.readSample = sample
-	bodyParameter := &Parameter{&ParameterData{Name: "body", Description: description}}
-	bodyParameter.beBody()
-	bodyParameter.Required(true)
+	bodyParameter := BodyParameter("body", description)
 	bodyParameter.DataType(sample)
 	b.Params(bodyParameter)
 	return b
@@ -149,7 +148,7 @@ func (b *RouteBuilder) Read(sample interface{}, optionalDescription ...string) *
 // Use this to modify or extend information for the Parameter (through its Data()).
 func (b RouteBuilder) ParameterNamed(name string) (p *Parameter) {
 	for _, each := range b.parameters {
-		if each.Data().Name == name {
+		if each.Name == name {
 			return each
 		}
 	}
@@ -181,17 +180,11 @@ func (b *RouteBuilder) Operation(name string) *RouteBuilder {
 // Return allows you to document what responses (errors or regular) can be expected.
 // The model parameter is optional ; either pass a struct instance or use nil if not applicable.
 func (b *RouteBuilder) Return(code int, message string, model interface{}) *RouteBuilder {
-	err := &ResponseError{
-		Code:      code,
-		Message:   message,
-		Model:     model,
-		IsDefault: false,
-	}
 	// lazy init because there is no NewRouteBuilder (yet)
 	if b.errorMap == nil {
 		b.errorMap = map[int]*ResponseError{}
 	}
-	b.errorMap[code] = err
+	b.errorMap[code] = NewResponseError(code, message, model)
 	return b
 }
 
@@ -199,14 +192,7 @@ func (b *RouteBuilder) Return(code int, message string, model interface{}) *Rout
 func (b *RouteBuilder) DefaultReturn(message string, model interface{}) *RouteBuilder {
 	b.Return(0, message, model)
 	// Modify the ResponseError just added/updated
-	re := b.errorMap[0]
-	// errorMap is initialized
-	b.errorMap[0] = &ResponseError{
-		Code:      re.Code,
-		Message:   re.Message,
-		Model:     re.Model,
-		IsDefault: true,
-	}
+	b.errorMap[0].IsDefault = true
 	return b
 }
 
@@ -238,24 +224,33 @@ func (b *RouteBuilder) Deprecate() *RouteBuilder {
 
 // ResponseError represents a response; not necessarily an error.
 type ResponseError struct {
+	spec.Response
 	Code      int
-	Message   string
 	Model     interface{}
 	IsDefault bool
 	RefName   string
 }
 
 func NewResponseError(code int, message string, model interface{}) *ResponseError {
-	return &ResponseError{
+	r := &ResponseError{
 		Code:      code,
-		Message:   message,
 		Model:     model,
 		IsDefault: false,
 	}
+	r.WithDescription(message)
+
+	return r
 }
 
 func (r *ResponseError) SetRefName(refName string) *ResponseError {
 	r.RefName = refName
+	return r
+}
+
+func (r *ResponseError) Header(name, description string, v interface{}) *ResponseError {
+	h := spec.ResponseHeader().WithDescription(description)
+	h.SimpleSchema.WithExample(v)
+	r.AddHeader(name, h)
 	return r
 }
 

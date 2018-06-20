@@ -27,13 +27,44 @@ func getDocFromMethodSwaggerDoc2(model reflect.Type) map[string]string {
 	return make(map[string]string)
 }
 
+func (b *definitionBuilder) getDefinitions() spec.Definitions {
+	return b.Definitions
+}
+
+func (b *definitionBuilder) SchemaFromModel(model reflect.Type, modelName, jsonName string) *spec.Schema {
+	ret := new(spec.Schema)
+	s := ret
+	if model.Kind() == reflect.Array || model.Kind() == reflect.Slice {
+		model = model.Elem()
+		s = new(spec.Schema)
+		ret.Type = []string{"array"}
+		ret.Items = &spec.SchemaOrArray{Schema: s}
+	}
+	if model.Kind() == reflect.Ptr {
+		model = model.Elem()
+	}
+
+	name := model.Kind().String()
+	if isPrimitiveType(name) {
+		s.AddType(jsonSchemaType(name), jsonSchemaFormat(name))
+	} else {
+		name = model.String()
+		if name == "" {
+			name = modelName + "." + jsonName
+		}
+		s.Ref = b.createRef(model, name)
+	}
+
+	return ret
+}
+
 // addModelFrom creates and adds a Schema to the builder and detects and calls
 // the post build hook for customizations
-func (b definitionBuilder) addModelFrom(sample interface{}) {
+func (b *definitionBuilder) addModelFrom(sample interface{}) {
 	b.addModel(reflect.TypeOf(sample), "")
 }
 
-func (b definitionBuilder) addModel(st reflect.Type, nameOverride string) *spec.Schema {
+func (b *definitionBuilder) addModel(st reflect.Type, nameOverride string) *spec.Schema {
 	// Turn pointers into simpler types so further checks are
 	// correct.
 	if st.Kind() == reflect.Ptr {
@@ -121,7 +152,7 @@ func (b definitionBuilder) addModel(st reflect.Type, nameOverride string) *spec.
 	return &sm
 }
 
-func (b definitionBuilder) isPropertyRequired(field reflect.StructField) bool {
+func (b *definitionBuilder) isPropertyRequired(field reflect.StructField) bool {
 	required := true
 	if optionalTag := field.Tag.Get("optional"); optionalTag == "true" {
 		return false
@@ -135,7 +166,7 @@ func (b definitionBuilder) isPropertyRequired(field reflect.StructField) bool {
 	return required
 }
 
-func (b definitionBuilder) buildProperty(field reflect.StructField, model *spec.Schema, modelName string) (jsonName, modelDescription string, prop spec.Schema) {
+func (b *definitionBuilder) buildProperty(field reflect.StructField, model *spec.Schema, modelName string) (jsonName, modelDescription string, prop spec.Schema) {
 	jsonName = b.jsonNameOfField(field)
 	if len(jsonName) == 0 {
 		// empty name signals skip property
@@ -200,29 +231,13 @@ func (b definitionBuilder) buildProperty(field reflect.StructField, model *spec.
 		return jsonName, modelDescription, prop
 	}
 
-	fieldTypeName := fieldType.Kind().String()
-	if !b.isPrimitiveType(fieldTypeName) {
-		fieldTypeName = b.keyFrom(fieldType)
-	}
-	if b.isPrimitiveType(fieldTypeName) {
-		mapped := b.jsonSchemaType(fieldTypeName)
-		prop.Type = []string{mapped}
-		prop.Format = b.jsonSchemaFormat(fieldTypeName)
-		return jsonName, modelDescription, prop
-	}
-	modelType := b.keyFrom(fieldType)
-	prop.Ref = b.createRef(modelType)
-
-	if fieldType.Name() == "" { // override type of anonymous structs
-		nestedTypeName := modelName + "." + jsonName
-		prop.Ref = b.createRef(nestedTypeName)
-		b.addModel(fieldType, nestedTypeName)
-	}
+	prop = *b.SchemaFromModel(fieldType, modelName, jsonName)
 	return jsonName, modelDescription, prop
 }
 
-func (b definitionBuilder) createRef(typeName string) spec.Ref {
-	return spec.MustCreateRef("#/definitions/" + typeName)
+func (b *definitionBuilder) createRef(st reflect.Type, name string) spec.Ref {
+	b.addModel(st, name)
+	return spec.MustCreateRef("#/definitions/" + name)
 }
 
 func hasNamedJSONTag(field reflect.StructField) bool {
@@ -238,15 +253,14 @@ func hasNamedJSONTag(field reflect.StructField) bool {
 	return len(parts[0]) > 0
 }
 
-func (b definitionBuilder) buildStructTypeProperty(field reflect.StructField, jsonName string, model *spec.Schema) (nameJson string, prop spec.Schema) {
+func (b *definitionBuilder) buildStructTypeProperty(field reflect.StructField, jsonName string, model *spec.Schema) (nameJson string, prop spec.Schema) {
 	setPropertyMetadata(&prop, field)
 	fieldType := field.Type
 	// check for anonymous
 	if len(fieldType.Name()) == 0 {
 		// anonymous
 		anonType := model.ID + "." + jsonName
-		b.addModel(fieldType, anonType)
-		prop.Ref = b.createRef(anonType)
+		prop.Ref = b.createRef(fieldType, anonType)
 		return jsonName, prop
 	}
 
@@ -283,13 +297,12 @@ func (b definitionBuilder) buildStructTypeProperty(field reflect.StructField, js
 		return "", prop
 	}
 	// simple struct
-	b.addModel(fieldType, "")
 	var pType = b.keyFrom(fieldType)
-	prop.Ref = b.createRef(pType)
+	prop.Ref = b.createRef(fieldType, pType)
 	return jsonName, prop
 }
 
-func (b definitionBuilder) buildArrayTypeProperty(field reflect.StructField, jsonName, modelName string) (nameJson string, prop spec.Schema) {
+func (b *definitionBuilder) buildArrayTypeProperty(field reflect.StructField, jsonName, modelName string) (nameJson string, prop spec.Schema) {
 	setPropertyMetadata(&prop, field)
 	fieldType := field.Type
 	if fieldType.Elem().Kind() == reflect.Uint8 {
@@ -299,28 +312,13 @@ func (b definitionBuilder) buildArrayTypeProperty(field reflect.StructField, jso
 	}
 	var pType = "array"
 	prop.Type = []string{pType}
-	isPrimitive := b.isPrimitiveType(fieldType.Elem().Name())
-	elemTypeName := b.getElementTypeName(modelName, jsonName, fieldType.Elem())
 	prop.Items = &spec.SchemaOrArray{
-		Schema: &spec.Schema{},
-	}
-	if isPrimitive {
-		mapped := b.jsonSchemaType(elemTypeName)
-		prop.Items.Schema.Type = []string{mapped}
-	} else {
-		prop.Items.Schema.Ref = b.createRef(elemTypeName)
-	}
-	// add|overwrite model for element type
-	if fieldType.Elem().Kind() == reflect.Ptr {
-		fieldType = fieldType.Elem()
-	}
-	if !isPrimitive {
-		b.addModel(fieldType.Elem(), elemTypeName)
+		Schema: b.SchemaFromModel(fieldType.Elem(), modelName, jsonName),
 	}
 	return jsonName, prop
 }
 
-func (b definitionBuilder) buildMapTypeProperty(field reflect.StructField, jsonName, modelName string) (nameJson string, prop spec.Schema) {
+func (b *definitionBuilder) buildMapTypeProperty(field reflect.StructField, jsonName, modelName string) (nameJson string, prop spec.Schema) {
 	setPropertyMetadata(&prop, field)
 	fieldType := field.Type
 	var pType = "object"
@@ -330,72 +328,22 @@ func (b definitionBuilder) buildMapTypeProperty(field reflect.StructField, jsonN
 	// intended type is and represent it in `AdditionalProperties`.
 	// See: https://swagger.io/docs/specification/data-models/dictionaries/
 	if fieldType.Elem().Kind().String() != "interface" {
-		isPrimitive := b.isPrimitiveType(fieldType.Elem().Name())
-		elemTypeName := b.getElementTypeName(modelName, jsonName, fieldType.Elem())
 		prop.AdditionalProperties = &spec.SchemaOrBool{
-			Schema: &spec.Schema{},
-		}
-		if isPrimitive {
-			mapped := b.jsonSchemaType(elemTypeName)
-			prop.AdditionalProperties.Schema.Type = []string{mapped}
-		} else {
-			prop.AdditionalProperties.Schema.Ref = b.createRef(elemTypeName)
-		}
-		// add|overwrite model for element type
-		if fieldType.Elem().Kind() == reflect.Ptr {
-			fieldType = fieldType.Elem()
-		}
-		if !isPrimitive {
-			b.addModel(fieldType.Elem(), elemTypeName)
+			Schema: b.SchemaFromModel(fieldType.Elem(), modelName, jsonName),
 		}
 	}
 	return jsonName, prop
 }
 
-func (b definitionBuilder) buildPointerTypeProperty(field reflect.StructField, jsonName, modelName string) (nameJson string, prop spec.Schema) {
-	setPropertyMetadata(&prop, field)
+func (b *definitionBuilder) buildPointerTypeProperty(field reflect.StructField, jsonName, modelName string) (nameJson string, prop spec.Schema) {
 	fieldType := field.Type
 
-	// override type of pointer to list-likes
-	if fieldType.Elem().Kind() == reflect.Slice || fieldType.Elem().Kind() == reflect.Array {
-		var pType = "array"
-		prop.Type = []string{pType}
-		isPrimitive := b.isPrimitiveType(fieldType.Elem().Elem().Name())
-		elemName := b.getElementTypeName(modelName, jsonName, fieldType.Elem().Elem())
-		prop.Items = &spec.SchemaOrArray{
-			Schema: &spec.Schema{},
-		}
-		if isPrimitive {
-			primName := b.jsonSchemaType(elemName)
-			prop.Items.Schema.Type = []string{primName}
-		} else {
-			prop.Items.Schema.Ref = b.createRef(elemName)
-		}
-		if !isPrimitive {
-			// add|overwrite model for element type
-			b.addModel(fieldType.Elem().Elem(), elemName)
-		}
-	} else {
-		// non-array, pointer type
-		fieldTypeName := b.keyFrom(fieldType.Elem())
-		var pType = b.jsonSchemaType(fieldTypeName) // no star, include pkg path
-		if b.isPrimitiveType(fieldTypeName) {
-			prop.Type = []string{pType}
-			prop.Format = b.jsonSchemaFormat(fieldTypeName)
-			return jsonName, prop
-		}
-		prop.Ref = b.createRef(pType)
-		elemName := ""
-		if fieldType.Elem().Name() == "" {
-			elemName = modelName + "." + jsonName
-			prop.Ref = b.createRef(elemName)
-		}
-		b.addModel(fieldType.Elem(), elemName)
-	}
+	prop = *b.SchemaFromModel(fieldType.Elem(), modelName, jsonName)
+	setPropertyMetadata(&prop, field)
 	return jsonName, prop
 }
 
-func (b definitionBuilder) getElementTypeName(modelName, jsonName string, t reflect.Type) string {
+func (b *definitionBuilder) getElementTypeName(modelName, jsonName string, t reflect.Type) string {
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
 	}
@@ -405,7 +353,7 @@ func (b definitionBuilder) getElementTypeName(modelName, jsonName string, t refl
 	return b.keyFrom(t)
 }
 
-func (b definitionBuilder) keyFrom(st reflect.Type) string {
+func (b *definitionBuilder) keyFrom(st reflect.Type) string {
 	key := st.String()
 	if b.Config.ModelTypeNameHandler != nil {
 		if name, ok := b.Config.ModelTypeNameHandler(st); ok {
@@ -422,7 +370,7 @@ func (b definitionBuilder) keyFrom(st reflect.Type) string {
 }
 
 // see also https://golang.org/ref/spec#Numeric_types
-func (b definitionBuilder) isPrimitiveType(modelName string) bool {
+func (b *definitionBuilder) isPrimitiveType(modelName string) bool {
 	if len(modelName) == 0 {
 		return false
 	}
@@ -431,7 +379,7 @@ func (b definitionBuilder) isPrimitiveType(modelName string) bool {
 
 // jsonNameOfField returns the name of the field as it should appear in JSON format
 // An empty string indicates that this field is not part of the JSON representation
-func (b definitionBuilder) jsonNameOfField(field reflect.StructField) string {
+func (b *definitionBuilder) jsonNameOfField(field reflect.StructField) string {
 	if jsonTag := field.Tag.Get("json"); jsonTag != "" {
 		s := strings.Split(jsonTag, ",")
 		if s[0] == "-" {
@@ -445,11 +393,11 @@ func (b definitionBuilder) jsonNameOfField(field reflect.StructField) string {
 }
 
 // see also http://json-schema.org/latest/json-schema-core.html#anchor8
-func (b definitionBuilder) jsonSchemaType(modelName string) string {
+func (b *definitionBuilder) jsonSchemaType(modelName string) string {
 	return jsonSchemaType(modelName)
 }
 
-func (b definitionBuilder) jsonSchemaFormat(modelName string) string {
+func (b *definitionBuilder) jsonSchemaFormat(modelName string) string {
 	if b.Config.SchemaFormatHandler != nil {
 		if mapped := b.Config.SchemaFormatHandler(modelName); mapped != "" {
 			return mapped

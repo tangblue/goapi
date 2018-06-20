@@ -44,35 +44,34 @@ func (r *Request) GetParameter(p *Parameter) (interface{}, error) {
 
 	err := r.Request.ParseForm()
 	if err != nil {
-		return p.getDefaultValue(), err
+		return nil, err
 	}
 
-	name := p.getName()
-	switch p.getKind() {
-	case PathParameterKind:
+	name := p.Name
+	switch p.In {
+	case "path":
 		v, ok = r.pathParameters[name]
-	case QueryParameterKind, FormParameterKind:
+	case "query", "formData":
 		va, found := r.Request.Form[name]
 		if found {
 			v = va[0]
 			ok = true
 		}
-	case BodyParameterKind:
+	case "body":
 		va, found := r.Request.PostForm[name]
 		if found {
 			v = va[0]
 			ok = true
 		}
-	case HeaderParameterKind:
+	case "header":
 		v, ok = r.Request.Header.Get(name), true
 	}
 
 	if !ok {
-		if v := p.getDefaultValue(); p.isRequired() {
-			return v, errors.New("not available")
-		} else {
-			return v, nil
+		if p.Required {
+			return nil, errors.New("not available")
 		}
+		return p.Default, nil
 	}
 
 	return p.getValue(v)

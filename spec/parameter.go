@@ -138,28 +138,6 @@ func (p *Parameter) WithLocation(in string) *Parameter {
 	return p
 }
 
-// Typed a fluent builder method for the type of the parameter value
-func (p *Parameter) Typed(tpe, format string) *Parameter {
-	p.Type = tpe
-	p.Format = format
-	return p
-}
-
-// CollectionOf a fluent builder method for an array parameter
-func (p *Parameter) CollectionOf(items *Items, format string) *Parameter {
-	p.Type = "array"
-	p.Items = items
-	p.CollectionFormat = format
-	return p
-}
-
-// WithDefault sets the default value on this parameter
-func (p *Parameter) WithDefault(defaultValue interface{}) *Parameter {
-	p.AsOptional() // with default implies optional
-	p.Default = defaultValue
-	return p
-}
-
 // AllowsEmptyValues flags this parameter as being ok with empty values
 func (p *Parameter) AllowsEmptyValues() *Parameter {
 	p.AllowEmptyValue = true
@@ -184,74 +162,6 @@ func (p *Parameter) AsRequired() *Parameter {
 		return p
 	}
 	p.Required = true
-	return p
-}
-
-// WithMaxLength sets a max length value
-func (p *Parameter) WithMaxLength(max int) *Parameter {
-	p.MaxLength = &max
-	return p
-}
-
-// WithMinLength sets a min length value
-func (p *Parameter) WithMinLength(min int) *Parameter {
-	p.MinLength = &min
-	return p
-}
-
-// WithPattern sets a pattern value
-func (p *Parameter) WithPattern(pattern string) *Parameter {
-	p.Pattern = pattern
-	return p
-}
-
-// WithMultipleOf sets a multiple of value
-func (p *Parameter) WithMultipleOf(number float64) *Parameter {
-	p.MultipleOf = &number
-	return p
-}
-
-// WithMaximum sets a maximum number value
-func (p *Parameter) WithMaximum(max interface{}, exclusive bool) *Parameter {
-	p.Maximum = &max
-	p.ExclusiveMaximum = exclusive
-	return p
-}
-
-// WithMinimum sets a minimum number value
-func (p *Parameter) WithMinimum(min interface{}, exclusive bool) *Parameter {
-	p.Minimum = &min
-	p.ExclusiveMinimum = exclusive
-	return p
-}
-
-// WithEnum sets a the enum values (replace)
-func (p *Parameter) WithEnum(values ...interface{}) *Parameter {
-	p.Enum = append([]interface{}{}, values...)
-	return p
-}
-
-// WithMaxItems sets the max items
-func (p *Parameter) WithMaxItems(size int64) *Parameter {
-	p.MaxItems = &size
-	return p
-}
-
-// WithMinItems sets the min items
-func (p *Parameter) WithMinItems(size int64) *Parameter {
-	p.MinItems = &size
-	return p
-}
-
-// UniqueValues dictates that this array can only have unique items
-func (p *Parameter) UniqueValues() *Parameter {
-	p.UniqueItems = true
-	return p
-}
-
-// AllowDuplicates this array can have duplicates
-func (p *Parameter) AllowDuplicates() *Parameter {
-	p.UniqueItems = false
 	return p
 }
 

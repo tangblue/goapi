@@ -16,16 +16,16 @@ func (b *responseBuilder) createRef(refName string) spec.Ref {
 	return spec.MustCreateRef("#/responses/" + refName)
 }
 
-func (b *responseBuilder) getRefResponses() spec.RefResponses {
+func (b *responseBuilder) getRefResponses(defBuilder *definitionBuilder) spec.RefResponses {
 	responses := spec.RefResponses{}
 
 	for _, e := range b.responses {
-		responses[e.RefName] = b.createResponse(e)
+		responses[e.RefName] = b.createResponse(e, defBuilder)
 	}
 	return responses
 }
 
-func (b *responseBuilder) build(e *restful.ResponseError) spec.Response {
+func (b *responseBuilder) build(e *restful.ResponseError, defBuilder *definitionBuilder) spec.Response {
 	if e.RefName != "" {
 		if b.responses == nil {
 			b.responses = make(map[string]*restful.ResponseError)
@@ -41,47 +41,23 @@ func (b *responseBuilder) build(e *restful.ResponseError) spec.Response {
 		return spec.Response{Refable: spec.Refable{Ref: b.createRef(e.RefName)}}
 	}
 
-	return b.createResponse(e)
+	return b.createResponse(e, defBuilder)
 }
 
-func (b *responseBuilder) createResponse(e *restful.ResponseError) (r spec.Response) {
-	r.Description = e.Message
-	if e.Model != nil {
+func (b *responseBuilder) createResponse(e *restful.ResponseError, defBuilder *definitionBuilder) (r spec.Response) {
+	if e.Schema == nil && e.Model != nil {
 		st := reflect.TypeOf(e.Model)
-		if st.Kind() == reflect.Ptr {
-			// For pointer type, use element type as the key; otherwise we'll
-			// endup with '#/definitions/*Type' which violates openapi spec.
-			st = st.Elem()
-		}
-		r.Schema = new(spec.Schema)
-		defBuilder := definitionBuilder{}
-		if st.Kind() == reflect.Array || st.Kind() == reflect.Slice {
-			modelName := defBuilder.keyFrom(st.Elem())
-			r.Schema.Type = []string{"array"}
-			r.Schema.Items = &spec.SchemaOrArray{
-				Schema: &spec.Schema{},
+		e.Schema = defBuilder.SchemaFromModel(st, "", "")
+		for k, v := range e.Headers {
+			if v.TypeName() == "" && v.Example != nil {
+				name := reflect.TypeOf(v.Example).Kind().String()
+				if !isPrimitiveType(name) {
+					panic("Header is not primitive type")
+				}
+				v.Typed(jsonSchemaType(name), jsonSchemaFormat(name))
 			}
-			isPrimitive := isPrimitiveType(modelName)
-			if isPrimitive {
-				mapped := jsonSchemaType(modelName)
-				r.Schema.Items.Schema.Type = []string{mapped}
-			} else {
-				r.Schema.Items.Schema.Ref = defBuilder.createRef(modelName)
-			}
-		} else {
-			modelName := st.Kind().String()
-			if !isPrimitiveType(modelName) {
-				modelName = defBuilder.keyFrom(st)
-			}
-			if isPrimitiveType(modelName) {
-				// If the response is a primitive type, then don't reference any definitions.
-				// Instead, set the schema's "type" to the model name.
-				r.Schema.AddType(modelName, "")
-			} else {
-				modelName := defBuilder.keyFrom(st)
-				r.Schema.Ref = defBuilder.createRef(modelName)
-			}
+			e.AddHeader(k, &v)
 		}
 	}
-	return r
+	return e.Response
 }

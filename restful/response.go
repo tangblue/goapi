@@ -187,7 +187,7 @@ func (r *Response) WriteServiceError(httpStatus int, err ServiceError) error {
 }
 
 func (r *Response) WriteErrorResponse(e *ResponseError) error {
-	return r.WriteErrorString(e.Code, e.Message)
+	return r.WriteErrorString(e.Code, e.Description)
 }
 
 // WriteErrorString is a convenience method for an error status with the actual error

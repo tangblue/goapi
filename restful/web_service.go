@@ -93,7 +93,7 @@ func (w *WebService) ParamPath(root string, parameters ...*Parameter) *WebServic
 	if len(parameters) > 0 {
 		var s []interface{} = make([]interface{}, len(parameters))
 		for i, v := range parameters {
-			if v.Data().Kind != PathParameterKind {
+			if v.In != "path" {
 				panic("Bad parameter kind")
 			}
 			s[i] = v
@@ -123,26 +123,10 @@ func (w *WebService) PathParameter(name, description string) *Parameter {
 	return PathParameter(name, description)
 }
 
-// PathParameter creates a new Parameter of kind Path for documentation purposes.
-// It is initialized as required with string as its DataType.
-func PathParameter(name, description string) *Parameter {
-	p := &Parameter{&ParameterData{Name: name, Description: description, Required: true, DefaultValue: string("")}}
-	p.bePath()
-	return p
-}
-
 // QueryParameter creates a new Parameter of kind Query for documentation purposes.
 // It is initialized as not required with string as its DataType.
 func (w *WebService) QueryParameter(name, description string) *Parameter {
 	return QueryParameter(name, description)
-}
-
-// QueryParameter creates a new Parameter of kind Query for documentation purposes.
-// It is initialized as not required with string as its DataType.
-func QueryParameter(name, description string) *Parameter {
-	p := &Parameter{&ParameterData{Name: name, Description: description, Required: false, DefaultValue: string(""), CollectionFormat: CollectionFormatCSV.String()}}
-	p.beQuery()
-	return p
 }
 
 // BodyParameter creates a new Parameter of kind Body for documentation purposes.
@@ -151,40 +135,16 @@ func (w *WebService) BodyParameter(name, description string) *Parameter {
 	return BodyParameter(name, description)
 }
 
-// BodyParameter creates a new Parameter of kind Body for documentation purposes.
-// It is initialized as required without a DataType.
-func BodyParameter(name, description string) *Parameter {
-	p := &Parameter{&ParameterData{Name: name, Description: description, Required: true}}
-	p.beBody()
-	return p
-}
-
 // HeaderParameter creates a new Parameter of kind (Http) Header for documentation purposes.
 // It is initialized as not required with string as its DataType.
 func (w *WebService) HeaderParameter(name, description string) *Parameter {
 	return HeaderParameter(name, description)
 }
 
-// HeaderParameter creates a new Parameter of kind (Http) Header for documentation purposes.
-// It is initialized as not required with string as its DataType.
-func HeaderParameter(name, description string) *Parameter {
-	p := &Parameter{&ParameterData{Name: name, Description: description, Required: false, DefaultValue: string("")}}
-	p.beHeader()
-	return p
-}
-
 // FormParameter creates a new Parameter of kind Form (using application/x-www-form-urlencoded) for documentation purposes.
 // It is initialized as required with string as its DataType.
 func (w *WebService) FormParameter(name, description string) *Parameter {
-	return FormParameter(name, description)
-}
-
-// FormParameter creates a new Parameter of kind Form (using application/x-www-form-urlencoded) for documentation purposes.
-// It is initialized as required with string as its DataType.
-func FormParameter(name, description string) *Parameter {
-	p := &Parameter{&ParameterData{Name: name, Description: description, Required: false, DefaultValue: string("")}}
-	p.beForm()
-	return p
+	return FormDataParameter(name, description)
 }
 
 // Route creates a new Route using the RouteBuilder and add to the ordered list of Routes.

@@ -88,17 +88,17 @@ func buildOperation(ws *restful.WebService, r restful.Route, patterns map[string
 	}
 	// collect any path parameters
 	for _, param := range ws.PathParameters() {
-		o.Parameters = append(o.Parameters, sb.param.build(r, param, patterns[param.Data().Name]))
+		o.Parameters = append(o.Parameters, sb.buildParameter(param, patterns[param.Name]))
 	}
 	// route specific params
 	for _, each := range r.ParameterDocs {
-		o.Parameters = append(o.Parameters, sb.param.build(r, each, patterns[each.Data().Name]))
+		o.Parameters = append(o.Parameters, sb.buildParameter(each, patterns[each.Name]))
 	}
 	o.Responses = new(spec.Responses)
 	props := &o.Responses.ResponsesProps
 	props.StatusCodeResponses = map[int]spec.Response{}
 	for k, v := range r.ResponseErrors {
-		r := sb.resp.build(v)
+		r := sb.buildResponse(v)
 		props.StatusCodeResponses[k] = r
 		if v.IsDefault {
 			o.Responses.Default = &r
