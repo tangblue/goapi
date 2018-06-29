@@ -25,12 +25,12 @@ func newTestService(addServiceFilter bool, addRouteFilter bool) *WebService {
 	if addServiceFilter {
 		ws.Filter(serviceFilter)
 	}
-	rb := ws.GET("/foo").To(foo)
+	rb := ws.GET("/foo").Handler(foo)
 	if addRouteFilter {
 		rb.Filter(routeFilter)
 	}
 	ws.Route(rb)
-	ws.Route(ws.GET("/bar").To(bar))
+	ws.Route(ws.GET("/bar").Handler(bar))
 	return ws
 }
 

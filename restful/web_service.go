@@ -183,14 +183,14 @@ func (w *WebService) Method(httpMethod string) *RouteBuilder {
 
 // Produce specifies that this WebService can produce one or more MIME types.
 // Http requests must have one of these values set for the Accept header.
-func (w *WebService) Produce(contentTypes ...string) *WebService {
+func (w *WebService) Produces(contentTypes ...string) *WebService {
 	w.produces = contentTypes
 	return w
 }
 
 // Consume specifies that this WebService can consume one or more MIME types.
 // Http requests must have one of these values set for the Content-Type header.
-func (w *WebService) Consume(accepts ...string) *WebService {
+func (w *WebService) Consumes(accepts ...string) *WebService {
 	w.consumes = accepts
 	return w
 }

@@ -27,12 +27,12 @@ var parameter = Parameter{
 	}},
 	Refable: Refable{Ref: MustCreateRef("Dog")},
 	CommonValidations: CommonValidations{
-		Maximum:          float64Ptr(100),
+		Maximum:          float64(100),
 		ExclusiveMaximum: true,
 		ExclusiveMinimum: true,
-		Minimum:          float64Ptr(5),
-		MaxLength:        int64Ptr(100),
-		MinLength:        int64Ptr(5),
+		Minimum:          float64(5),
+		MaxLength:        intPtr(100),
+		MinLength:        intPtr(5),
 		Pattern:          "\\w{1,5}\\w+",
 		MaxItems:         int64Ptr(100),
 		MinItems:         int64Ptr(5),
@@ -102,31 +102,39 @@ func TestParameterSerialization(t *testing.T) {
 	items := &Items{
 		SimpleSchema: SimpleSchema{Type: "string"},
 	}
+	stringTyped := func(p *Parameter) *Parameter {
+		p.Typed("string", "")
+		return p
+	}
+	collectionOf := func(p *Parameter, items *Items) *Parameter {
+		p.CollectionOf(items, "multi")
+		return p
+	}
 
 	intItems := &Items{
 		SimpleSchema: SimpleSchema{Type: "int", Format: "int32"},
 	}
 
-	assertSerializeJSON(t, QueryParam("").Typed("string", ""), `{"type":"string","in":"query"}`)
+	assertSerializeJSON(t, stringTyped(QueryParam("")), `{"type":"string","in":"query"}`)
 
 	assertSerializeJSON(t,
-		QueryParam("").CollectionOf(items, "multi"),
+		collectionOf(QueryParam(""), items),
 		`{"type":"array","items":{"type":"string"},"collectionFormat":"multi","in":"query"}`)
 
-	assertSerializeJSON(t, PathParam("").Typed("string", ""), `{"type":"string","in":"path","required":true}`)
+	assertSerializeJSON(t, stringTyped(PathParam("")), `{"type":"string","in":"path","required":true}`)
 
 	assertSerializeJSON(t,
-		PathParam("").CollectionOf(items, "multi"),
+		collectionOf(PathParam(""), items),
 		`{"type":"array","items":{"type":"string"},"collectionFormat":"multi","in":"path","required":true}`)
 
 	assertSerializeJSON(t,
-		PathParam("").CollectionOf(intItems, "multi"),
+		collectionOf(PathParam(""), intItems),
 		`{"type":"array","items":{"type":"int","format":"int32"},"collectionFormat":"multi","in":"path","required":true}`)
 
-	assertSerializeJSON(t, HeaderParam("").Typed("string", ""), `{"type":"string","in":"header","required":true}`)
+	assertSerializeJSON(t, stringTyped(HeaderParam("")), `{"type":"string","in":"header","required":true}`)
 
 	assertSerializeJSON(t,
-		HeaderParam("").CollectionOf(items, "multi"),
+		collectionOf(HeaderParam(""), items),
 		`{"type":"array","items":{"type":"string"},"collectionFormat":"multi","in":"header","required":true}`)
 	schema := &Schema{SchemaProps: SchemaProps{
 		Properties: map[string]Schema{
@@ -142,15 +150,15 @@ func TestParameterSerialization(t *testing.T) {
 
 	assertSerializeJSON(t,
 		BodyParam("", schema),
-		`{"type":"object","in":"body","schema":{"properties":{"name":{"type":"string"}}}}`)
+		`{"type":"object","in":"body","required":true,"schema":{"properties":{"name":{"type":"string"}}}}`)
 
 	assertSerializeJSON(t,
 		BodyParam("", refSchema),
-		`{"type":"object","in":"body","schema":{"$ref":"Cat"}}`)
+		`{"type":"object","in":"body","required":true,"schema":{"$ref":"Cat"}}`)
 
 	// array body param
 	assertSerializeJSON(t,
 		BodyParam("", ArrayProperty(RefProperty("Cat"))),
-		`{"type":"object","in":"body","schema":{"type":"array","items":{"$ref":"Cat"}}}`)
+		`{"type":"object","in":"body","required":true,"schema":{"type":"array","items":{"$ref":"Cat"}}}`)
 
 }

@@ -78,13 +78,13 @@ func (b *RouteBuilder) Method(method string) *RouteBuilder {
 }
 
 // Produce specifies what MIME types can be produced ; the matched one will appear in the Content-Type Http header.
-func (b *RouteBuilder) Produce(mimeTypes ...string) *RouteBuilder {
+func (b *RouteBuilder) Produces(mimeTypes ...string) *RouteBuilder {
 	b.produces = mimeTypes
 	return b
 }
 
 // Consume specifies what MIME types can be consumes ; the Accept Http header must matched any of these
-func (b *RouteBuilder) Consume(mimeTypes ...string) *RouteBuilder {
+func (b *RouteBuilder) Consumes(mimeTypes ...string) *RouteBuilder {
 	b.consumes = mimeTypes
 	return b
 }
@@ -132,7 +132,7 @@ func (b *RouteBuilder) Read(sample interface{}, optionalDescription ...string) *
 	if fn == nil {
 		fn = reflectTypeName
 	}
-	//typeAsName := fn(sample)
+	typeAsName := fn(sample)
 	description := ""
 	if len(optionalDescription) > 0 {
 		description = optionalDescription[0]
@@ -140,6 +140,7 @@ func (b *RouteBuilder) Read(sample interface{}, optionalDescription ...string) *
 	b.readSample = sample
 	bodyParameter := BodyParameter("body", description)
 	bodyParameter.DataType(sample)
+	bodyParameter.Typed(typeAsName, "")
 	b.Params(bodyParameter)
 	return b
 }

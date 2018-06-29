@@ -232,6 +232,7 @@ func (b *definitionBuilder) buildProperty(field reflect.StructField, model *spec
 	}
 
 	prop = *b.SchemaFromModel(fieldType, modelName, jsonName)
+	setPropertyMetadata(&prop, field)
 	return jsonName, modelDescription, prop
 }
 

@@ -13,7 +13,7 @@ func TestQueryParameter(t *testing.T) {
 	hreq := http.Request{Method: "GET"}
 	hreq.URL, _ = url.Parse("http://www.google.com/search?q=foo&q=bar")
 	rreq := Request{Request: &hreq}
-	if rreq.QueryParameter("q") != "foo" {
+	if q, _ := rreq.GetParameter(QueryParameter("q", "")); q != "foo" {
 		t.Errorf("q!=foo %#v", rreq)
 	}
 }
@@ -104,11 +104,11 @@ func TestBodyParameter(t *testing.T) {
 	httpRequest, _ := http.NewRequest("POST", "/test?value1=44", bodyReader) // POST and PUT body parameters take precedence over URL query string
 	httpRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
 	request := NewRequest(httpRequest)
-	v1, err := request.BodyParameter("value1")
+	v1, err := request.GetParameter(BodyParameter("value1", ""))
 	if err != nil {
 		t.Error(err)
 	}
-	v2, err := request.BodyParameter("value2")
+	v2, err := request.GetParameter(BodyParameter("value2", ""))
 	if err != nil {
 		t.Error(err)
 	}

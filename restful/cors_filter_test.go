@@ -11,7 +11,7 @@ import (
 func TestCORSFilter_Preflight(t *testing.T) {
 	tearDown()
 	ws := new(WebService)
-	ws.Route(ws.PUT("/cors").To(dummy))
+	ws.Route(ws.PUT("/cors").Handler(dummy))
 	Add(ws)
 
 	cors := CrossOriginResourceSharing{
@@ -62,7 +62,7 @@ func TestCORSFilter_Preflight(t *testing.T) {
 func TestCORSFilter_Actual(t *testing.T) {
 	tearDown()
 	ws := new(WebService)
-	ws.Route(ws.PUT("/cors").To(dummy))
+	ws.Route(ws.PUT("/cors").Handler(dummy))
 	Add(ws)
 
 	cors := CrossOriginResourceSharing{
@@ -105,7 +105,7 @@ func TestCORSFilter_AllowedDomains(t *testing.T) {
 	for _, each := range allowedDomainInput {
 		tearDown()
 		ws := new(WebService)
-		ws.Route(ws.PUT("/cors").To(dummy))
+		ws.Route(ws.PUT("/cors").Handler(dummy))
 		Add(ws)
 
 		cors := CrossOriginResourceSharing{

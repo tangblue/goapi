@@ -32,13 +32,13 @@ func TestThatExtraTagsAreReadIntoModel(t *testing.T) {
 		t.Errorf("got %v want %v", got, want)
 	}
 	p2, _ := props.Properties["Size"]
-	if got, want := *p2.Minimum, 0.0; got != want {
+	if got, want := p2.Minimum.(int), 0; got != want {
 		t.Errorf("got %v want %v", got, want)
 	}
 	if got, want := p2.ReadOnly, false; got != want {
 		t.Errorf("got %v want %v", got, want)
 	}
-	if got, want := *p2.Maximum, 10.0; got != want {
+	if got, want := p2.Maximum.(int), 10; got != want {
 		t.Errorf("got %v want %v", got, want)
 	}
 	p3, _ := props.Properties["Stati"]

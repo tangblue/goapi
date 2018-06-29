@@ -212,9 +212,9 @@ type SchemaProps struct {
 	Format               string            `json:"format,omitempty"`
 	Title                string            `json:"title,omitempty"`
 	Default              interface{}       `json:"default,omitempty"`
-	Maximum              *float64          `json:"maximum,omitempty"`
+	Maximum              interface{}       `json:"maximum,omitempty"`
 	ExclusiveMaximum     bool              `json:"exclusiveMaximum,omitempty"`
-	Minimum              *float64          `json:"minimum,omitempty"`
+	Minimum              interface{}       `json:"minimum,omitempty"`
 	ExclusiveMinimum     bool              `json:"exclusiveMinimum,omitempty"`
 	MaxLength            *int64            `json:"maxLength,omitempty"`
 	MinLength            *int64            `json:"minLength,omitempty"`

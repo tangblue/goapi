@@ -27,6 +27,9 @@ func float64Ptr(f float64) *float64 {
 func int64Ptr(f int64) *int64 {
 	return &f
 }
+func intPtr(f int) *int {
+	return &f
+}
 
 var header = Header{
 	VendorExtensible: VendorExtensible{Extensions: map[string]interface{}{
@@ -42,12 +45,12 @@ var header = Header{
 		Default: "8",
 	},
 	CommonValidations: CommonValidations{
-		Maximum:          float64Ptr(100),
+		Maximum:          float64(100),
 		ExclusiveMaximum: true,
 		ExclusiveMinimum: true,
-		Minimum:          float64Ptr(5),
-		MaxLength:        int64Ptr(100),
-		MinLength:        int64Ptr(5),
+		Minimum:          float64(5),
+		MaxLength:        intPtr(100),
+		MinLength:        intPtr(5),
 		Pattern:          "\\w{1,5}\\w+",
 		MaxItems:         int64Ptr(100),
 		MinItems:         int64Ptr(5),

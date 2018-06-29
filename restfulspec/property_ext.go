@@ -2,7 +2,6 @@ package restfulspec
 
 import (
 	"reflect"
-	"strconv"
 	"strings"
 
 	"github.com/tangblue/goapi/spec"
@@ -16,7 +15,7 @@ func setDescription(prop *spec.Schema, field reflect.StructField) {
 
 func setDefaultValue(prop *spec.Schema, field reflect.StructField) {
 	if tag := field.Tag.Get("default"); tag != "" {
-		prop.Default = stringAutoType(field.Type.Name(), tag)
+		prop.Default = stringReflectType(field.Type, tag)
 	}
 }
 
@@ -34,19 +33,13 @@ func setEnumValues(prop *spec.Schema, field reflect.StructField) {
 
 func setMaximum(prop *spec.Schema, field reflect.StructField) {
 	if tag := field.Tag.Get("maximum"); tag != "" {
-		value, err := strconv.ParseFloat(tag, 64)
-		if err == nil {
-			prop.Maximum = &value
-		}
+		prop.Maximum = stringReflectType(field.Type, tag)
 	}
 }
 
 func setMinimum(prop *spec.Schema, field reflect.StructField) {
 	if tag := field.Tag.Get("minimum"); tag != "" {
-		value, err := strconv.ParseFloat(tag, 64)
-		if err == nil {
-			prop.Minimum = &value
-		}
+		prop.Minimum = stringReflectType(field.Type, tag)
 	}
 }
 

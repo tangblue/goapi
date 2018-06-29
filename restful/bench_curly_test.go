@@ -18,7 +18,7 @@ func setupCurly(container *Container) []string {
 		ws := new(WebService).Path(root)
 		for j := 0; j < rtCount; j++ {
 			sub := fmt.Sprintf("/%s2/{%s2}", string(j+97), string(j+97))
-			ws.Route(ws.GET(sub).Consumes("application/xml").Produces("application/xml").To(echoCurly))
+			ws.Route(ws.GET(sub).Consumes("application/xml").Produces("application/xml").Handler(echoCurly))
 		}
 		container.Add(ws)
 		for _, each := range ws.Routes() {

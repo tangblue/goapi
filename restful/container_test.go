@@ -10,8 +10,8 @@ import (
 func TestContainer_computeAllowedMethods(t *testing.T) {
 	wc := NewContainer()
 	ws1 := new(WebService).Path("/users")
-	ws1.Route(ws1.GET("{i}").To(dummy))
-	ws1.Route(ws1.POST("{i}").To(dummy))
+	ws1.Route(ws1.GET("{i}").Handler(dummy))
+	ws1.Route(ws1.POST("{i}").Handler(dummy))
 	wc.Add(ws1)
 	httpRequest, _ := http.NewRequest("GET", "http://api.his.com/users/1", nil)
 	rreq := Request{Request: httpRequest}

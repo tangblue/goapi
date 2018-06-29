@@ -24,12 +24,12 @@ import (
 var items = Items{
 	Refable: Refable{Ref: MustCreateRef("Dog")},
 	CommonValidations: CommonValidations{
-		Maximum:          float64Ptr(100),
+		Maximum:          float64(100),
 		ExclusiveMaximum: true,
 		ExclusiveMinimum: true,
-		Minimum:          float64Ptr(5),
-		MaxLength:        int64Ptr(100),
-		MinLength:        int64Ptr(5),
+		Minimum:          float64(5),
+		MaxLength:        intPtr(100),
+		MinLength:        intPtr(5),
 		Pattern:          "\\w{1,5}\\w+",
 		MaxItems:         int64Ptr(100),
 		MinItems:         int64Ptr(5),

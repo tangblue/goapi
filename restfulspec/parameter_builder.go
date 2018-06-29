@@ -26,6 +26,9 @@ func (b *parameterBuilder) getRefParameters(defBuilder *definitionBuilder) spec.
 }
 
 func (b *parameterBuilder) build(param *restful.Parameter, pattern string, defBuilder *definitionBuilder) spec.Parameter {
+	if param.Pattern == "" {
+		param.WithPattern(pattern)
+	}
 	if param.RefName != "" {
 		if b.parameters == nil {
 			b.parameters = make(map[string]*restful.Parameter)
@@ -71,6 +74,7 @@ func (b *parameterBuilder) createParameter(param *restful.Parameter, defBuilder 
 
 	if param.In == "body" && param.Schema == nil {
 		st := reflect.TypeOf(param.Model)
+		param.SimpleSchema = spec.SimpleSchema{}
 		param.Schema = defBuilder.SchemaFromModel(st, "", "")
 	}
 

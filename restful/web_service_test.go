@@ -11,29 +11,26 @@ const (
 )
 
 func TestParameter(t *testing.T) {
-	p := &Parameter{&ParameterData{Name: "name", Description: "desc"}}
-	p.AllowMultiple(true)
-	p.DataType("int")
-	p.Required(true)
-	values := map[string]string{"a": "b"}
-	p.AllowableValues(values)
-	p.bePath()
+	p := PathParameter("name", "desc")
+	p.WithCollectionFormat(CollectionFormatMulti)
+	p.DataType(int(0))
+	p.AsRequired()
 
 	ws := new(WebService)
-	ws.Param(p)
-	if ws.pathParameters[0].Data().Name != "name" {
+	ws.Params(p)
+	if ws.pathParameters[0].Name != "name" {
 		t.Error("path parameter (or name) invalid")
 	}
 }
 func TestWebService_CanCreateParameterKinds(t *testing.T) {
 	ws := new(WebService)
-	if ws.BodyParameter("b", "b").Kind() != BodyParameterKind {
+	if ws.BodyParameter("b", "b").In != "body" {
 		t.Error("body parameter expected")
 	}
-	if ws.PathParameter("p", "p").Kind() != PathParameterKind {
+	if ws.PathParameter("p", "p").In != "path" {
 		t.Error("path parameter expected")
 	}
-	if ws.QueryParameter("q", "q").Kind() != QueryParameterKind {
+	if ws.QueryParameter("q", "q").In != "query" {
 		t.Error("query parameter expected")
 	}
 }
@@ -246,9 +243,9 @@ type exampleBody struct{}
 func TestParameterDataTypeDefaults(t *testing.T) {
 	tearDown()
 	ws := new(WebService)
-	route := ws.POST("/post").Reads(&exampleBody{}, "")
-	if route.parameters[0].data.DataType != "*restful.exampleBody" {
-		t.Errorf("body parameter incorrect name: %#v", route.parameters[0].data)
+	route := ws.POST("/post").Read(&exampleBody{}, "")
+	if route.parameters[0].Type != "*restful.exampleBody" {
+		t.Errorf("body parameter incorrect name: %#v", route.parameters[0])
 	}
 }
 
@@ -258,69 +255,69 @@ func TestParameterDataTypeCustomization(t *testing.T) {
 	ws.TypeNameHandler(func(sample interface{}) string {
 		return "my.custom.type.name"
 	})
-	route := ws.POST("/post").Reads(&exampleBody{}, "")
-	if route.parameters[0].data.DataType != "my.custom.type.name" {
-		t.Errorf("body parameter incorrect name: %#v", route.parameters[0].data)
+	route := ws.POST("/post").Read(&exampleBody{}, "")
+	if route.parameters[0].Type != "my.custom.type.name" {
+		t.Errorf("body parameter incorrect name: %#v", route.parameters[0])
 	}
 }
 
 func newPanicingService() *WebService {
 	ws := new(WebService).Path("")
-	ws.Route(ws.GET("/fire").To(doPanic))
+	ws.Route(ws.GET("/fire").Handler(doPanic))
 	return ws
 }
 
 func newGetOnlyService() *WebService {
 	ws := new(WebService).Path("")
-	ws.Route(ws.GET("/get").To(doPanic))
+	ws.Route(ws.GET("/get").Handler(doPanic))
 	return ws
 }
 
 func newPostOnlyJsonOnlyService() *WebService {
 	ws := new(WebService).Path("")
 	ws.Consumes("application/json")
-	ws.Route(ws.POST("/post").To(doNothing))
+	ws.Route(ws.POST("/post").Handler(doNothing))
 	return ws
 }
 
 func newGetOnlyJsonOnlyService() *WebService {
 	ws := new(WebService).Path("")
 	ws.Consumes("application/json")
-	ws.Route(ws.GET("/get").To(doNothing))
+	ws.Route(ws.GET("/get").Handler(doNothing))
 	return ws
 }
 
 func newGetPlainTextOrJsonService() *WebService {
 	ws := new(WebService).Path("")
 	ws.Produces("text/plain", "application/json")
-	ws.Route(ws.GET("/get").To(doNothing))
+	ws.Route(ws.GET("/get").Handler(doNothing))
 	return ws
 }
 
 func newGetPlainTextOrJsonServiceMultiRoute() *WebService {
 	ws := new(WebService).Path("")
 	ws.Produces("text/plain", "application/json")
-	ws.Route(ws.GET("/get").To(doNothing))
-	ws.Route(ws.GET("/status").To(doNothing))
+	ws.Route(ws.GET("/get").Handler(doNothing))
+	ws.Route(ws.GET("/status").Handler(doNothing))
 	return ws
 }
 
 func newGetConsumingOctetStreamService() *WebService {
 	ws := new(WebService).Path("")
 	ws.Consumes("application/octet-stream")
-	ws.Route(ws.GET("/get").To(doNothing))
+	ws.Route(ws.GET("/get").Handler(doNothing))
 	return ws
 }
 
 func newPostNoConsumesService() *WebService {
 	ws := new(WebService).Path("")
-	ws.Route(ws.POST("/post").To(return204))
+	ws.Route(ws.POST("/post").Handler(return204))
 	return ws
 }
 
 func newSelectedRouteTestingService() *WebService {
 	ws := new(WebService).Path("")
-	ws.Route(ws.GET(pathGetFriends).To(selectedRouteChecker))
+	ws.Route(ws.GET(pathGetFriends).Handler(selectedRouteChecker))
 	return ws
 }
 

@@ -13,25 +13,27 @@ func TestRouteToPath(t *testing.T) {
 
 	ws := new(restful.WebService)
 	ws.Path("/tests/{v}")
-	ws.Param(ws.PathParameter("v", "value of v").DefaultValue("default-v"))
+	ws.Params(ws.PathParameter("v", "value of v").DataType("default-v"))
 	ws.Consumes(restful.MIME_JSON)
 	ws.Produces(restful.MIME_XML)
-	ws.Route(ws.GET("/a/{b}").To(dummy).
+	ws.Route(ws.GET("/a/{b}").Handler(dummy).
 		Doc(description).
-		Notes(notes).
-		Param(ws.PathParameter("b", "value of b").DefaultValue("default-b")).
-		Param(ws.QueryParameter("q", "value of q").DefaultValue("default-q")).
-		Returns(200, "list of a b tests", []Sample{}).
-		Writes([]Sample{}))
-	ws.Route(ws.GET("/a/{b}/{c:[a-z]+}/{d:[1-9]+}/e").To(dummy).
-		Param(ws.PathParameter("b", "value of b").DefaultValue("default-b")).
-		Param(ws.PathParameter("c", "with regex").DefaultValue("abc")).
-		Param(ws.PathParameter("d", "with regex").DefaultValue("abcef")).
-		Param(ws.QueryParameter("q", "value of q").DefaultValue("default-q")).
-		Returns(200, "list of a b tests", []Sample{}).
-		Writes([]Sample{}))
+		Note(notes).
+		Params(ws.PathParameter("b", "value of b").DataType("default-b")).
+		Params(ws.QueryParameter("q", "value of q").DataType("default-q")).
+		Return(200, "list of a b tests", []Sample{}).
+		Write([]Sample{}))
+	ws.Route(ws.GET("/a/{b}/{c:[a-z]+}/{d:[1-9]+}/e").Handler(dummy).
+		Params(ws.PathParameter("b", "value of b").DataType("default-b")).
+		Params(ws.PathParameter("c", "with regex").DataType("abc")).
+		Params(ws.PathParameter("d", "with regex").DataType("abcef")).
+		Params(ws.QueryParameter("q", "value of q").DataType("default-q")).
+		Return(200, "list of a b tests", []Sample{}).
+		Write([]Sample{}))
 
-	p := buildPaths(ws, Config{})
+	sb := &swaggerBuilder{}
+	sb.def.Definitions = spec.Definitions{}
+	p := buildPaths(ws, Config{}, sb)
 	t.Log(asJSON(p))
 
 	if p.Paths["/tests/{v}/a/{b}"].Get.Parameters[0].Type != "string" {
@@ -86,18 +88,20 @@ func TestMultipleMethodsRouteToPath(t *testing.T) {
 	ws.Path("/tests/a")
 	ws.Consumes(restful.MIME_JSON)
 	ws.Produces(restful.MIME_XML)
-	ws.Route(ws.GET("/a/b").To(dummy).
+	ws.Route(ws.GET("/a/b").Handler(dummy).
 		Doc("get a b test").
-		Returns(200, "list of a b tests", []Sample{}).
-		Writes([]Sample{}))
-	ws.Route(ws.POST("/a/b").To(dummy).
+		Return(200, "list of a b tests", []Sample{}).
+		Write([]Sample{}))
+	ws.Route(ws.POST("/a/b").Handler(dummy).
 		Doc("post a b test").
-		Returns(200, "list of a b tests", []Sample{}).
-		Returns(500, "internal server error", []Sample{}).
-		Reads(Sample{}).
-		Writes([]Sample{}))
+		Return(200, "list of a b tests", []Sample{}).
+		Return(500, "internal server error", []Sample{}).
+		Read(Sample{}).
+		Write([]Sample{}))
 
-	p := buildPaths(ws, Config{})
+	sb := &swaggerBuilder{}
+	sb.def.Definitions = spec.Definitions{}
+	p := buildPaths(ws, Config{}, sb)
 	t.Log(asJSON(p))
 
 	if p.Paths["/tests/a/a/b"].Get.Summary != "get a b test" {
@@ -128,14 +132,16 @@ func TestReadArrayObjectInBody(t *testing.T) {
 	ws.Consumes(restful.MIME_JSON)
 	ws.Produces(restful.MIME_XML)
 
-	ws.Route(ws.POST("/a/b").To(dummy).
+	ws.Route(ws.POST("/a/b").Handler(dummy).
 		Doc("post a b test with array in body").
-		Returns(200, "list of a b tests", []Sample{}).
-		Returns(500, "internal server error", []Sample{}).
-		Reads([]Sample{}).
-		Writes([]Sample{}))
+		Return(200, "list of a b tests", []Sample{}).
+		Return(500, "internal server error", []Sample{}).
+		Read([]Sample{}).
+		Write([]Sample{}))
 
-	p := buildPaths(ws, Config{})
+	sb := &swaggerBuilder{}
+	sb.def.Definitions = spec.Definitions{}
+	p := buildPaths(ws, Config{}, sb)
 	t.Log(asJSON(p))
 
 	postInfo := p.Paths["/tests/a/a/b"].Post
@@ -171,17 +177,19 @@ func TestWritesPrimitive(t *testing.T) {
 	ws.Consumes(restful.MIME_JSON)
 	ws.Produces(restful.MIME_JSON)
 
-	ws.Route(ws.POST("/primitive").To(dummy).
+	ws.Route(ws.POST("/primitive").Handler(dummy).
 		Doc("post that returns a string").
-		Returns(200, "primitive string", "(this is a string)").
-		Writes("(this is a string)"))
+		Return(200, "primitive string", "(this is a string)").
+		Write("(this is a string)"))
 
-	ws.Route(ws.POST("/custom").To(dummy).
+	ws.Route(ws.POST("/custom").Handler(dummy).
 		Doc("post that returns a custom structure").
-		Returns(200, "sample object", Sample{}).
-		Writes(Sample{}))
+		Return(200, "sample object", Sample{}).
+		Write(Sample{}))
 
-	p := buildPaths(ws, Config{})
+	sb := &swaggerBuilder{}
+	sb.def.Definitions = spec.Definitions{}
+	p := buildPaths(ws, Config{}, sb)
 	t.Log(asJSON(p))
 
 	// Make sure that the operation that returns a primitive type is correct.

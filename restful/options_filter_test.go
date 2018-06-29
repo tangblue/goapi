@@ -10,9 +10,9 @@ import (
 func TestOptionsFilter(t *testing.T) {
 	tearDown()
 	ws := new(WebService)
-	ws.Route(ws.GET("/candy/{kind}").To(dummy))
-	ws.Route(ws.DELETE("/candy/{kind}").To(dummy))
-	ws.Route(ws.POST("/candies").To(dummy))
+	ws.Route(ws.GET("/candy/{kind}").Handler(dummy))
+	ws.Route(ws.DELETE("/candy/{kind}").Handler(dummy))
+	ws.Route(ws.POST("/candies").Handler(dummy))
 	Add(ws)
 	Filter(OPTIONSFilter())
 

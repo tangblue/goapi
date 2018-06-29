@@ -168,8 +168,8 @@ func TestExtractParameters_Wildcard4(t *testing.T) {
 // clear && go test -v -test.run TestCurly_ISSUE_34 ...restful
 func TestCurly_ISSUE_34(t *testing.T) {
 	ws1 := new(WebService).Path("/")
-	ws1.Route(ws1.GET("/{type}/{id}").To(curlyDummy))
-	ws1.Route(ws1.GET("/network/{id}").To(curlyDummy))
+	ws1.Route(ws1.GET("/{type}/{id}").Handler(curlyDummy))
+	ws1.Route(ws1.GET("/network/{id}").Handler(curlyDummy))
 	croutes := CurlyRouter{}.selectRoutes(ws1, tokenizePath("/network/12"))
 	if len(croutes) != 2 {
 		t.Fatal("expected 2 routes")
@@ -182,8 +182,8 @@ func TestCurly_ISSUE_34(t *testing.T) {
 // clear && go test -v -test.run TestCurly_ISSUE_34_2 ...restful
 func TestCurly_ISSUE_34_2(t *testing.T) {
 	ws1 := new(WebService)
-	ws1.Route(ws1.GET("/network/{id}").To(curlyDummy))
-	ws1.Route(ws1.GET("/{type}/{id}").To(curlyDummy))
+	ws1.Route(ws1.GET("/network/{id}").Handler(curlyDummy))
+	ws1.Route(ws1.GET("/{type}/{id}").Handler(curlyDummy))
 	croutes := CurlyRouter{}.selectRoutes(ws1, tokenizePath("/network/12"))
 	if len(croutes) != 2 {
 		t.Fatal("expected 2 routes")
@@ -197,7 +197,7 @@ func TestCurly_ISSUE_34_2(t *testing.T) {
 func TestCurly_JsonHtml(t *testing.T) {
 	ws1 := new(WebService)
 	ws1.Path("/")
-	ws1.Route(ws1.GET("/some.html").To(curlyDummy).Consumes("*/*").Produces("text/html"))
+	ws1.Route(ws1.GET("/some.html").Handler(curlyDummy).Consumes("*/*").Produces("text/html"))
 	req, _ := http.NewRequest("GET", "/some.html", nil)
 	req.Header.Set("Accept", "application/json")
 	_, route, err := CurlyRouter{}.SelectRoute([]*WebService{ws1}, req)
@@ -212,7 +212,7 @@ func TestCurly_JsonHtml(t *testing.T) {
 // go test -v -test.run TestCurly_ISSUE_137 ...restful
 func TestCurly_ISSUE_137(t *testing.T) {
 	ws1 := new(WebService)
-	ws1.Route(ws1.GET("/hello").To(curlyDummy))
+	ws1.Route(ws1.GET("/hello").Handler(curlyDummy))
 	ws1.Path("/")
 	req, _ := http.NewRequest("GET", "/", nil)
 	_, route, _ := CurlyRouter{}.SelectRoute([]*WebService{ws1}, req)
@@ -225,7 +225,7 @@ func TestCurly_ISSUE_137(t *testing.T) {
 // go test -v -test.run TestCurly_ISSUE_137_2 ...restful
 func TestCurly_ISSUE_137_2(t *testing.T) {
 	ws1 := new(WebService)
-	ws1.Route(ws1.GET("/hello").To(curlyDummy))
+	ws1.Route(ws1.GET("/hello").Handler(curlyDummy))
 	ws1.Path("/")
 	req, _ := http.NewRequest("GET", "/hello/bob", nil)
 	_, route, _ := CurlyRouter{}.SelectRoute([]*WebService{ws1}, req)

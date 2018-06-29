@@ -25,7 +25,7 @@ func NewOpenAPIService(config Config) *restful.WebService {
 
 	ws := new(restful.WebService)
 	ws.Path(config.APIPath)
-	ws.Produce(restful.MIME_JSON)
+	ws.Produces(restful.MIME_JSON)
 	if config.DisableCORS {
 		ws.Filter(enableCORS)
 	}

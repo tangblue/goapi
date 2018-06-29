@@ -2,6 +2,7 @@ package restfulspec
 
 import (
 	"net/http"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -135,6 +136,94 @@ func stringAutoType(dataType, ambiguous string) interface{} {
 		}
 	}
 	return ambiguous
+}
+
+func stringIntType(t reflect.Type, v int64, err error) interface{} {
+	if err != nil {
+		return nil
+	}
+
+	ret := reflect.New(t).Elem()
+	ret.SetInt(v)
+	return ret.Interface()
+}
+
+func stringUintType(t reflect.Type, v uint64, err error) interface{} {
+	if err != nil {
+		return nil
+	}
+
+	ret := reflect.New(t).Elem()
+	ret.SetUint(v)
+	return ret.Interface()
+}
+
+func stringFloatType(t reflect.Type, v float64, err error) interface{} {
+	if err != nil {
+		return nil
+	}
+
+	ret := reflect.New(t).Elem()
+	ret.SetFloat(v)
+	return ret.Interface()
+}
+
+func stringBoolType(t reflect.Type, v bool, err error) interface{} {
+	if err != nil {
+		return nil
+	}
+
+	ret := reflect.New(t).Elem()
+	ret.SetBool(v)
+	return ret.Interface()
+}
+
+func stringReflectType(t reflect.Type, ambiguous string) interface{} {
+	switch t.Kind() {
+	case reflect.String:
+		ret := reflect.New(t).Elem()
+		ret.SetString(ambiguous)
+		return ret.Interface()
+
+	case reflect.Int8:
+		v, err := strconv.ParseInt(ambiguous, 0, 8)
+		return stringIntType(t, v, err)
+	case reflect.Int16:
+		v, err := strconv.ParseInt(ambiguous, 0, 16)
+		return stringIntType(t, v, err)
+	case reflect.Int, reflect.Int32:
+		v, err := strconv.ParseInt(ambiguous, 0, 32)
+		return stringIntType(t, v, err)
+	case reflect.Int64:
+		v, err := strconv.ParseInt(ambiguous, 0, 64)
+		return stringIntType(t, v, err)
+
+	case reflect.Uint8:
+		v, err := strconv.ParseUint(ambiguous, 0, 8)
+		return stringUintType(t, v, err)
+	case reflect.Uint16:
+		v, err := strconv.ParseUint(ambiguous, 0, 16)
+		return stringUintType(t, v, err)
+	case reflect.Uint, reflect.Uint32:
+		v, err := strconv.ParseUint(ambiguous, 0, 32)
+		return stringUintType(t, v, err)
+	case reflect.Uint64:
+		v, err := strconv.ParseUint(ambiguous, 0, 64)
+		return stringUintType(t, v, err)
+
+	case reflect.Float32:
+		v, err := strconv.ParseFloat(ambiguous, 32)
+		return stringFloatType(t, v, err)
+	case reflect.Float64:
+		v, err := strconv.ParseFloat(ambiguous, 64)
+		return stringFloatType(t, v, err)
+
+	case reflect.Bool:
+		v, err := strconv.ParseBool(ambiguous)
+		return stringBoolType(t, v, err)
+	}
+
+	return nil
 }
 
 // stripTags takes a snippet of HTML and returns only the text content.

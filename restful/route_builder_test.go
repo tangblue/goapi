@@ -6,32 +6,26 @@ import (
 )
 
 func TestRouteBuilder_PathParameter(t *testing.T) {
-	p := &Parameter{&ParameterData{Name: "name", Description: "desc"}}
-	p.AllowMultiple(true)
-	p.DataType("int")
-	p.Required(true)
-	values := map[string]string{"a": "b"}
-	p.AllowableValues(values)
-	p.bePath()
+	p := PathParameter("name", "desc")
+	p.WithCollectionFormat(CollectionFormatMulti)
+	p.DataType(int(0))
+	p.AsRequired()
 
 	b := new(RouteBuilder)
 	b.function = dummy
-	b.Param(p)
+	b.Params(p)
 	r := b.Build()
-	if !r.ParameterDocs[0].Data().AllowMultiple {
+	if r.ParameterDocs[0].CollectionFormat != "multi" {
 		t.Error("AllowMultiple invalid")
 	}
-	if r.ParameterDocs[0].Data().DataType != "int" {
+	if r.ParameterDocs[0].Model != int(0) {
 		t.Error("dataType invalid")
 	}
-	if !r.ParameterDocs[0].Data().Required {
+	if !r.ParameterDocs[0].Required {
 		t.Error("required invalid")
 	}
-	if r.ParameterDocs[0].Data().Kind != PathParameterKind {
+	if r.ParameterDocs[0].In != "path" {
 		t.Error("kind invalid")
-	}
-	if r.ParameterDocs[0].Data().AllowableValues["a"] != "b" {
-		t.Error("allowableValues invalid")
 	}
 	if b.ParameterNamed("name") == nil {
 		t.Error("access to parameter failed")
@@ -41,8 +35,8 @@ func TestRouteBuilder_PathParameter(t *testing.T) {
 func TestRouteBuilder(t *testing.T) {
 	json := "application/json"
 	b := new(RouteBuilder)
-	b.To(dummy)
-	b.Path("/routes").Method("HEAD").Consumes(json).Produces(json).Metadata("test", "test-value").DefaultReturns("default", time.Now())
+	b.Handler(dummy)
+	b.Path("/routes").Method("HEAD").Consumes(json).Produces(json).Metadata("test", "test-value").DefaultReturn("default", time.Now())
 	r := b.Build()
 	if r.Path != "/routes" {
 		t.Error("path invalid")

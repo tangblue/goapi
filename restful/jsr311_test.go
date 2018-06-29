@@ -39,7 +39,7 @@ func TestDetectDispatcher(t *testing.T) {
 
 	wc := NewContainer()
 	for _, each := range dispatchers {
-		each.Route(each.GET("").To(dummy))
+		each.Route(each.GET("").Handler(dummy))
 		wc.Add(each)
 	}
 
@@ -78,7 +78,7 @@ func TestDetectDispatcher(t *testing.T) {
 // go test -v -test.run TestISSUE_179 ...restful
 func TestISSUE_179(t *testing.T) {
 	ws1 := new(WebService)
-	ws1.Route(ws1.GET("/v1/category/{param:*}").To(dummy))
+	ws1.Route(ws1.GET("/v1/category/{param:*}").Handler(dummy))
 	routes := RouterJSR311{}.selectRoutes(ws1, "/v1/category/sub/sub")
 	t.Logf("%v", routes)
 }
@@ -86,8 +86,8 @@ func TestISSUE_179(t *testing.T) {
 // go test -v -test.run TestISSUE_30 ...restful
 func TestISSUE_30(t *testing.T) {
 	ws1 := new(WebService).Path("/users")
-	ws1.Route(ws1.GET("/{id}").To(dummy))
-	ws1.Route(ws1.POST("/login").To(dummy))
+	ws1.Route(ws1.GET("/{id}").Handler(dummy))
+	ws1.Route(ws1.POST("/login").Handler(dummy))
 	routes := RouterJSR311{}.selectRoutes(ws1, "/login")
 	if len(routes) != 2 {
 		t.Fatal("expected 2 routes")
@@ -101,8 +101,8 @@ func TestISSUE_30(t *testing.T) {
 // go test -v -test.run TestISSUE_34 ...restful
 func TestISSUE_34(t *testing.T) {
 	ws1 := new(WebService).Path("/")
-	ws1.Route(ws1.GET("/{type}/{id}").To(dummy))
-	ws1.Route(ws1.GET("/network/{id}").To(dummy))
+	ws1.Route(ws1.GET("/{type}/{id}").Handler(dummy))
+	ws1.Route(ws1.GET("/network/{id}").Handler(dummy))
 	routes := RouterJSR311{}.selectRoutes(ws1, "/network/12")
 	if len(routes) != 2 {
 		t.Fatal("expected 2 routes")
@@ -117,8 +117,8 @@ func TestISSUE_34(t *testing.T) {
 func TestISSUE_34_2(t *testing.T) {
 	ws1 := new(WebService).Path("/")
 	// change the registration order
-	ws1.Route(ws1.GET("/network/{id}").To(dummy))
-	ws1.Route(ws1.GET("/{type}/{id}").To(dummy))
+	ws1.Route(ws1.GET("/network/{id}").Handler(dummy))
+	ws1.Route(ws1.GET("/{type}/{id}").Handler(dummy))
 	routes := RouterJSR311{}.selectRoutes(ws1, "/network/12")
 	if len(routes) != 2 {
 		t.Fatal("expected 2 routes")
@@ -131,7 +131,7 @@ func TestISSUE_34_2(t *testing.T) {
 // go test -v -test.run TestISSUE_137 ...restful
 func TestISSUE_137(t *testing.T) {
 	ws1 := new(WebService)
-	ws1.Route(ws1.GET("/hello").To(dummy))
+	ws1.Route(ws1.GET("/hello").Handler(dummy))
 	routes := RouterJSR311{}.selectRoutes(ws1, "/")
 	t.Log(routes)
 	if len(routes) > 0 {
@@ -141,13 +141,13 @@ func TestISSUE_137(t *testing.T) {
 
 func TestSelectRoutesSlash(t *testing.T) {
 	ws1 := new(WebService).Path("/")
-	ws1.Route(ws1.GET("").To(dummy))
-	ws1.Route(ws1.GET("/").To(dummy))
-	ws1.Route(ws1.GET("/u").To(dummy))
-	ws1.Route(ws1.POST("/u").To(dummy))
-	ws1.Route(ws1.POST("/u/v").To(dummy))
-	ws1.Route(ws1.POST("/u/{w}").To(dummy))
-	ws1.Route(ws1.POST("/u/{w}/z").To(dummy))
+	ws1.Route(ws1.GET("").Handler(dummy))
+	ws1.Route(ws1.GET("/").Handler(dummy))
+	ws1.Route(ws1.GET("/u").Handler(dummy))
+	ws1.Route(ws1.POST("/u").Handler(dummy))
+	ws1.Route(ws1.POST("/u/v").Handler(dummy))
+	ws1.Route(ws1.POST("/u/{w}").Handler(dummy))
+	ws1.Route(ws1.POST("/u/{w}/z").Handler(dummy))
 	routes := RouterJSR311{}.selectRoutes(ws1, "/u")
 	checkRoutesContains(routes, "/u", t)
 	checkRoutesContainsNo(routes, "/u/v", t)
@@ -156,20 +156,20 @@ func TestSelectRoutesSlash(t *testing.T) {
 }
 func TestSelectRoutesU(t *testing.T) {
 	ws1 := new(WebService).Path("/u")
-	ws1.Route(ws1.GET("").To(dummy))
-	ws1.Route(ws1.GET("/").To(dummy))
-	ws1.Route(ws1.GET("/v").To(dummy))
-	ws1.Route(ws1.POST("/{w}").To(dummy))
-	ws1.Route(ws1.POST("/{w}/z").To(dummy))          // so full path = /u/{w}/z
+	ws1.Route(ws1.GET("").Handler(dummy))
+	ws1.Route(ws1.GET("/").Handler(dummy))
+	ws1.Route(ws1.GET("/v").Handler(dummy))
+	ws1.Route(ws1.POST("/{w}").Handler(dummy))
+	ws1.Route(ws1.POST("/{w}/z").Handler(dummy))     // so full path = /u/{w}/z
 	routes := RouterJSR311{}.selectRoutes(ws1, "/v") // test against /u/v
 	checkRoutesContains(routes, "/u/{w}", t)
 }
 
 func TestSelectRoutesUsers1(t *testing.T) {
 	ws1 := new(WebService).Path("/users")
-	ws1.Route(ws1.POST("").To(dummy))
-	ws1.Route(ws1.POST("/").To(dummy))
-	ws1.Route(ws1.PUT("/{id}").To(dummy))
+	ws1.Route(ws1.POST("").Handler(dummy))
+	ws1.Route(ws1.POST("/").Handler(dummy))
+	ws1.Route(ws1.PUT("/{id}").Handler(dummy))
 	routes := RouterJSR311{}.selectRoutes(ws1, "/1")
 	checkRoutesContains(routes, "/users/{id}", t)
 }
@@ -223,20 +223,20 @@ func TestDetectRouteReturns404IfNoRoutePassesConditions(t *testing.T) {
 	shouldNotBeCalledButWas := false
 
 	routes := []Route{
-		new(RouteBuilder).To(dummy).
+		new(RouteBuilder).Handler(dummy).
 			If(func(req *http.Request) bool { return false }).
 			Build(),
 
 		// check that condition functions are called in order
 		new(RouteBuilder).
-			To(dummy).
+			Handler(dummy).
 			If(func(req *http.Request) bool { return true }).
 			If(func(req *http.Request) bool { called = true; return false }).
 			Build(),
 
 		// check that condition functions short circuit
 		new(RouteBuilder).
-			To(dummy).
+			Handler(dummy).
 			If(func(req *http.Request) bool { return false }).
 			If(func(req *http.Request) bool { shouldNotBeCalledButWas = true; return false }).
 			Build(),
@@ -278,7 +278,7 @@ func TestExtractParams(t *testing.T) {
 	for _, testCase := range extractParams {
 		t.Run(testCase.name, func(t *testing.T) {
 			ws1 := new(WebService).Path("/")
-			ws1.Route(ws1.GET(testCase.routePath).To(dummy))
+			ws1.Route(ws1.GET(testCase.routePath).Handler(dummy))
 			router := RouterJSR311{}
 			req, _ := http.NewRequest(http.MethodGet, testCase.urlPath, nil)
 			params := router.ExtractParameters(&ws1.Routes()[0], ws1, req.URL.Path)
@@ -296,7 +296,7 @@ func TestExtractParams(t *testing.T) {
 
 func TestSelectRouteInvalidMethod(t *testing.T) {
 	ws1 := new(WebService).Path("/")
-	ws1.Route(ws1.GET("/simple").To(dummy))
+	ws1.Route(ws1.GET("/simple").Handler(dummy))
 	router := RouterJSR311{}
 	req, _ := http.NewRequest(http.MethodPost, "/simple", nil)
 	_, _, err := router.SelectRoute([]*WebService{ws1}, req)
@@ -309,7 +309,7 @@ func TestParameterInWebService(t *testing.T) {
 	for _, testCase := range extractParams {
 		t.Run(testCase.name, func(t *testing.T) {
 			ws1 := new(WebService).Path("/{wsParam}")
-			ws1.Route(ws1.GET(testCase.routePath).To(dummy))
+			ws1.Route(ws1.GET(testCase.routePath).Handler(dummy))
 			router := RouterJSR311{}
 			req, _ := http.NewRequest(http.MethodGet, "/wsValue"+testCase.urlPath, nil)
 			params := router.ExtractParameters(&ws1.Routes()[0], ws1, req.URL.Path)

@@ -17,7 +17,7 @@ func setup(container *Container) {
 		ws := new(WebService).Path(root)
 		for j := 0; j < rtCount; j++ {
 			sub := fmt.Sprintf("/%s2/{%s2}", string(j+97), string(j+97))
-			ws.Route(ws.GET(sub).To(echo))
+			ws.Route(ws.GET(sub).Handler(echo))
 		}
 		container.Add(ws)
 		for _, each := range ws.Routes() {
