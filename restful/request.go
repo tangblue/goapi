@@ -8,6 +8,7 @@ import (
 	"compress/zlib"
 	"errors"
 	"net/http"
+	"reflect"
 )
 
 var defaultRequestContentType string
@@ -38,13 +39,13 @@ func DefaultRequestContentType(mime string) {
 }
 
 // GetParameter accesses the parameter value by Parameter
-func (r *Request) GetParameter(p *Parameter) (interface{}, error) {
+func (r *Request) GetParameter(p *Parameter, out interface{}) error {
 	var v string
 	var ok bool
 
 	err := r.Request.ParseForm()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	name := p.Name
@@ -69,12 +70,13 @@ func (r *Request) GetParameter(p *Parameter) (interface{}, error) {
 
 	if !ok {
 		if p.Required {
-			return nil, errors.New("not available")
+			return errors.New("not available")
 		}
-		return p.Default, nil
+		reflect.ValueOf(out).Elem().Set(reflect.ValueOf(p.Default))
+		return nil
 	}
 
-	return p.getValue(v)
+	return p.getValue(v, out)
 }
 
 // HeaderParameter returns the HTTP Header value of a Header name or empty if missing
