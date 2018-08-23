@@ -138,7 +138,7 @@ func TestParameterSerialization(t *testing.T) {
 		`{"type":"array","items":{"type":"string"},"collectionFormat":"multi","in":"header","required":true}`)
 	schema := &Schema{SchemaProps: SchemaProps{
 		Properties: map[string]Schema{
-			"name": Schema{SchemaProps: SchemaProps{
+			"name": {SchemaProps: SchemaProps{
 				Type: []string{"string"},
 			}},
 		},
