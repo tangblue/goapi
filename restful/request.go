@@ -40,32 +40,21 @@ func DefaultRequestContentType(mime string) {
 
 // GetParameter accesses the parameter value by Parameter
 func (r *Request) GetParameter(p *Parameter, out interface{}) error {
-	var v string
-	var ok bool
-
-	err := r.Request.ParseForm()
-	if err != nil {
+	if err := r.Request.ParseForm(); err != nil {
 		return err
 	}
 
-	name := p.Name
+	var ok bool
+	va := make([]string, 1)
 	switch p.In {
 	case "path":
-		v, ok = r.pathParameters[name]
+		va[0], ok = r.pathParameters[p.Name]
 	case "query", "formData":
-		va, found := r.Request.Form[name]
-		if found {
-			v = va[0]
-			ok = true
-		}
+		va, ok = r.Request.Form[p.Name]
 	case "body":
-		va, found := r.Request.PostForm[name]
-		if found {
-			v = va[0]
-			ok = true
-		}
+		va, ok = r.Request.PostForm[p.Name]
 	case "header":
-		v, ok = r.Request.Header.Get(name), true
+		va[0], ok = r.Request.Header.Get(p.Name), true
 	}
 
 	if !ok {
@@ -76,7 +65,7 @@ func (r *Request) GetParameter(p *Parameter, out interface{}) error {
 		return nil
 	}
 
-	return p.getValue(v, out)
+	return p.getValue(va, out)
 }
 
 // HeaderParameter returns the HTTP Header value of a Header name or empty if missing

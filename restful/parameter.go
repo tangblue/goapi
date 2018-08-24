@@ -140,10 +140,39 @@ var (
 	errBadEnum    = errors.New("bad enum")
 )
 
-func (p *Parameter) getValue(s string, out interface{}) error {
-	switch reflect.TypeOf(p.Model).Kind() {
+func (p *Parameter) getValue(s []string, out interface{}) error {
+	t := reflect.TypeOf(out).Elem()
+	v := reflect.ValueOf(out).Elem()
+
+	switch t.Kind() {
+	case reflect.Slice:
+		l := len(s)
+		if v.Len() < l {
+			v.Set(reflect.MakeSlice(t, l, l))
+		}
+		fallthrough
+	case reflect.Array:
+		l := len(s)
+		if v.Len() < l {
+			l = v.Len()
+		}
+		for i := 0; i < l; i++ {
+			if err := p.getElemValue(s[i], v.Index(i)); err != nil {
+				return err
+			}
+		}
+	default:
+		return p.getElemValue(s[0], v)
+	}
+
+	return nil
+}
+
+func (p *Parameter) getElemValue(s string, out reflect.Value) error {
+	switch out.Type().Kind() {
 	case reflect.String:
 		return p.validateValueString(s, out)
+
 	case reflect.Int8:
 		return p.validateValueInt(s, 8, out)
 	case reflect.Int16:
@@ -164,20 +193,22 @@ func (p *Parameter) getValue(s string, out interface{}) error {
 
 	case reflect.Bool:
 		return p.validateValueBool(s, out)
+
 	case reflect.Float32:
 		return p.validateValueFloat(s, 32, out)
 	case reflect.Float64:
 		return p.validateValueFloat(s, 64, out)
 	}
+
 	return errors.New("unknown type")
 }
 
-func (p *Parameter) validateEnum(v interface{}) error {
+func (p *Parameter) validateEnum(v reflect.Value) error {
 	if p.Enum == nil {
 		return nil
 	}
 
-	vi := reflect.ValueOf(v).Elem().Interface()
+	vi := v.Interface()
 	for _, e := range p.Enum {
 		if vi == e {
 			return nil
@@ -187,83 +218,68 @@ func (p *Parameter) validateEnum(v interface{}) error {
 	return errBadEnum
 }
 
-func (p *Parameter) validateValueString(v string, out interface{}) error {
-	if p.MinLength != nil || p.MaxLength != nil {
-		if len(v) < *p.MinLength {
-			return errTooShort
-		} else if len(v) > *p.MaxLength {
-			return errTooLong
-		}
-	}
-	if p.regex != nil {
-		if !p.regex.MatchString(v) {
-			return errBadPattern
-		}
+func (p *Parameter) validateValueString(v string, out reflect.Value) error {
+	if p.MinLength != nil && len(v) < *p.MinLength {
+		return errTooShort
+	} else if p.MaxLength != nil && len(v) > *p.MaxLength {
+		return errTooLong
+	} else if p.regex != nil && !p.regex.MatchString(v) {
+		return errBadPattern
 	}
 
-	reflect.ValueOf(out).Elem().SetString(v)
+	out.SetString(v)
 
 	return p.validateEnum(out)
 }
 
-func (p *Parameter) validateValueInt(s string, bits int, out interface{}) error {
-	v, err := strconv.ParseInt(s, 0, bits)
-	if err != nil {
+func (p *Parameter) validateValueInt(s string, bits int, out reflect.Value) error {
+	if v, err := strconv.ParseInt(s, 0, bits); err != nil {
 		return err
-	}
-
-	if p.Minimum != nil && v < reflect.ValueOf(p.Minimum).Int() {
+	} else if p.Minimum != nil && v < reflect.ValueOf(p.Minimum).Int() {
 		return errLTMin
 	} else if p.Maximum != nil && v > reflect.ValueOf(p.Maximum).Int() {
 		return errGTMax
+	} else {
+		out.SetInt(v)
 	}
-
-	reflect.ValueOf(out).Elem().SetInt(v)
 
 	return p.validateEnum(out)
 }
 
-func (p *Parameter) validateValueUint(s string, bits int, out interface{}) error {
-	v, err := strconv.ParseUint(s, 0, bits)
-	if err != nil {
+func (p *Parameter) validateValueUint(s string, bits int, out reflect.Value) error {
+	if v, err := strconv.ParseUint(s, 0, bits); err != nil {
 		return err
-	}
-
-	if p.Minimum != nil && v < reflect.ValueOf(p.Minimum).Uint() {
+	} else if p.Minimum != nil && v < reflect.ValueOf(p.Minimum).Uint() {
 		return errLTMin
 	} else if p.Maximum != nil && v > reflect.ValueOf(p.Maximum).Uint() {
 		return errGTMax
+	} else {
+		out.SetUint(v)
 	}
-
-	reflect.ValueOf(out).Elem().SetUint(v)
 
 	return p.validateEnum(out)
 }
 
-func (p *Parameter) validateValueBool(s string, out interface{}) error {
-	v, err := strconv.ParseBool(s)
-	if err != nil {
+func (p *Parameter) validateValueBool(s string, out reflect.Value) error {
+	if v, err := strconv.ParseBool(s); err != nil {
 		return err
+	} else {
+		out.SetBool(v)
 	}
-
-	reflect.ValueOf(out).Elem().SetBool(v)
 
 	return p.validateEnum(out)
 }
 
-func (p *Parameter) validateValueFloat(s string, bits int, out interface{}) error {
-	v, err := strconv.ParseFloat(s, bits)
-	if err != nil {
+func (p *Parameter) validateValueFloat(s string, bits int, out reflect.Value) error {
+	if v, err := strconv.ParseFloat(s, bits); err != nil {
 		return err
-	}
-
-	if p.Minimum != nil && v < reflect.ValueOf(p.Minimum).Float() {
+	} else if p.Minimum != nil && v < reflect.ValueOf(p.Minimum).Float() {
 		return errLTMin
 	} else if p.Maximum != nil && v > reflect.ValueOf(p.Maximum).Float() {
 		return errGTMax
+	} else {
+		out.SetFloat(v)
 	}
-
-	reflect.ValueOf(out).Elem().SetFloat(v)
 
 	return p.validateEnum(out)
 }
